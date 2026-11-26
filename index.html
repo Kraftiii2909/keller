@@ -170,6 +170,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid rgba(110,31,47,.35);bo
 .mline{display:grid;grid-template-columns:1fr 110px;gap:8px;margin-bottom:8px}
 .running{background:#3A6EA5;color:#fff;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px}
 .running button{margin-left:auto;background:#fff;color:#1F4B78;font-weight:700;padding:9px 12px;border-radius:10px}
+.flst{display:flex;gap:6px;margin:10px 0 4px}.flst input{flex:1;min-width:0;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:15px;background:#fff}
+.flst .btn{width:auto;margin:0;padding:10px 14px}.mapctl button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+details.more{margin:4px 0 12px}details.more summary{cursor:pointer;color:var(--muted);font-size:14px;padding:6px 2px}
 </style>
 </head>
 <body>
@@ -844,7 +847,7 @@ const App = (() => {
     const a = angDeg * Math.PI / 180, d = [Math.cos(a), Math.sin(a)], n = [-Math.sin(a), Math.cos(a)];
     const dot = (p, v) => p[0]*v[0] + p[1]*v[1];
     const ps = xy.map(p => dot(p, n)), mn = Math.min(...ps), mx = Math.max(...ps);
-    const first = mn + (((spacing / 2 + offset) % spacing) + spacing) % spacing;
+    const base = offset + spacing / 2, first = base + Math.ceil((mn - base) / spacing) * spacing;
     const rows = [];
     for (let s0 = first; s0 < mx; s0 += spacing) {
       const ts = [];
@@ -865,27 +868,28 @@ const App = (() => {
     return ang;
   }
   /* Reihen im gedrehten Rahmen (Reihen liegen waagerecht) */
+  function polysOf(u){ const p = jparse(u, []); if (!Array.isArray(p) || !p.length) return []; return typeof p[0][0] === 'number' ? [p] : p; }
   const frameCache = new Map();
   function frame(w){
     const key = w.Weinberg_ID + '|' + (w.Reihen || '').length + '|' + (w.Umriss || '').length + '|' + w.Reihen_Anzahl + '|' + w.Zeilenbreite_m;
     if (frameCache.has(key)) return frameCache.get(key);
     let res = null;
-    const poly = jparse(w.Umriss, []), rws = jparse(w.Reihen, []);
+    const polys = polysOf(w.Umriss).filter(p => p.length >= 3), rws = jparse(w.Reihen, []);
     const sp = num(w.Zeilenbreite_m) || 2;
-    if (poly.length >= 3 && rws.length) {
-      const P = proj(poly), xy = poly.map(P.to);
+    if (polys.length && rws.length) {
+      const P = proj(polys.flat());
       const r0 = [P.to([rws[0][0], rws[0][1]]), P.to([rws[0][2], rws[0][3]])];
       const a = Math.atan2(r0[1][1] - r0[0][1], r0[1][0] - r0[0][0]), c = Math.cos(-a), s = Math.sin(-a);
       const rot = p => [p[0]*c - p[1]*s, -(p[0]*s + p[1]*c)];
       const rows = rws.map(r => { let A = rot(P.to([r[0], r[1]])), B = rot(P.to([r[2], r[3]])); if (A[0] > B[0]) [A, B] = [B, A];
         return { x0: A[0], x1: B[0], y: (A[1] + B[1]) / 2, len: Math.hypot(B[0]-A[0], B[1]-A[1]) }; });
-      res = { rows, poly: xy.map(rot), sp };
+      res = { rows, polys: polys.map(p => p.map(P.to).map(rot)), sp };
     } else {
       const n = Math.round(num(w.Reihen_Anzahl) || 0);
       if (n > 0) {
         const ha = num(w.Flaeche_ha), len = ha ? Math.max(20, Math.min(400, ha * 10000 / (n * sp))) : 100;
         const rows = Array.from({ length: n }, (_, i) => ({ x0: 0, x1: len, y: i * sp, len }));
-        res = { rows, poly: [[-sp/2, -sp/2], [len + sp/2, -sp/2], [len + sp/2, n*sp - sp/2], [-sp/2, n*sp - sp/2]], sp, schema: true };
+        res = { rows, polys: [[[-sp/2, -sp/2], [len + sp/2, -sp/2], [len + sp/2, n*sp - sp/2], [-sp/2, n*sp - sp/2]]], sp, schema: true };
       }
     }
     // Reihen von oben nach unten nummerieren
@@ -916,12 +920,12 @@ const App = (() => {
   function wbSVG(w, o = {}){
     const f = frame(w);
     if (!f) return `<svg viewBox="0 0 100 60"><text x="50" y="34" text-anchor="middle" font-size="9" fill="#A99C92">noch keine Reihen</text></svg>`;
-    const xs = f.poly.map(p => p[0]).concat(f.rows.flatMap(r => [r.x0, r.x1])), ys = f.poly.map(p => p[1]).concat(f.rows.map(r => r.y));
+    const allP = f.polys.flat(), xs = allP.map(p => p[0]).concat(f.rows.flatMap(r => [r.x0, r.x1])), ys = allP.map(p => p[1]).concat(f.rows.map(r => r.y));
     const pad = f.sp * 1.2, x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad, W = Math.max(...xs) - x0 + pad, H = Math.max(...ys) - y0 + pad;
     const big = !!o.big, col = arbeitFarbe(o.arbeit);
     const lw = big ? Math.max(f.sp * 0.42, W / 220) : Math.max(f.sp * 0.55, W / 60);
     const line = (r, a, b, c, w2, extra='') => `<line x1="${(r.x0 + (r.x1 - r.x0) * a).toFixed(2)}" y1="${r.y.toFixed(2)}" x2="${(r.x0 + (r.x1 - r.x0) * b).toFixed(2)}" y2="${r.y.toFixed(2)}" stroke="${c}" stroke-width="${w2.toFixed(2)}" stroke-linecap="round" ${extra}/>`;
-    let g = `<path d="M${f.poly.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L')}Z" fill="${big ? '#EAE0CF' : '#E4D8C4'}" stroke="#C9B9A2" stroke-width="${(lw*0.5).toFixed(2)}"/>`;
+    let g = `<path d="${f.polys.map(pl => 'M' + pl.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L') + 'Z').join('')}" fill="${big ? '#EAE0CF' : '#E4D8C4'}" stroke="#C9B9A2" stroke-width="${(lw*0.5).toFixed(2)}"/>`;
     g += f.rows.map(r => line(r, 0, 1, big ? '#BDB0A0' : '#CFC2B0', lw * 0.55)).join('');
     if (o.arbeit) {
       const cov = o.cov || coverage(w, o.arbeit);
@@ -1065,16 +1069,17 @@ const App = (() => {
   /* ---------- Weinberg anlegen / bearbeiten ---------- */
   function wbEdit(id){
     const w = (id && wbById(id)) || {};
-    openSheet(`<h2>${id ? 'Weinberg bearbeiten' : 'Weinberg anlegen'}</h2><p class="lead">Umriss und Reihen zeichnest du danach auf der Karte. Ohne Karte reicht die Anzahl der Reihen.</p>
+    openSheet(`<h2>${id ? 'Weinberg bearbeiten' : 'Weinberg anlegen'}</h2><p class="lead">${id ? '' : 'Name und Flurstück reichen – den Umriss holt die App danach aus dem Kataster.'}</p>
       <form id="frm" onsubmit="event.preventDefault();App.wbEditSave('${esc(id || '')}')"><p id="frmErr" class="note warn" hidden></p>
         ${field('Name', inTxt('Name', w.Name, 'z. B. Kirchberg oben'))}
-        <div class="two">${field('Lage', inTxt('Lage', w.Lage, 'Weinlage'))}${field('Rebsorte', inTxt('Rebsorte', w.Rebsorte))}</div>
-        <div class="two">${field('Gemarkung', inTxt('Gemarkung', w.Gemarkung))}${field('Flur', inTxt('Flur', w.Flur))}</div>
-        <div class="two">${field('Flurstück(e)', inTxt('Flurstueck', w.Flurstueck, 'z. B. 123/4'))}${field('Pflanzjahr', inNum('Pflanzjahr', num(w.Pflanzjahr), '', '1'))}</div>
-        <div class="two">${field('Fläche (ha)', inNum('Flaeche_ha', num(w.Flaeche_ha), 'z. B. 0,45'))}${field('Zeilenbreite (m)', inNum('Zeilenbreite_m', num(w.Zeilenbreite_m) || 2))}</div>
-        <div class="two">${field('Stockabstand (m)', inNum('Stockabstand_m', num(w.Stockabstand_m), 'optional'))}${field('Anzahl Reihen', inNum('Reihen_Anzahl', num(w.Reihen_Anzahl), 'ohne Karte', '1'))}</div>
-        ${field('Bemerkung', inTxt('Bemerkung', w.Bemerkung))}
-        <button class="btn" type="submit">Speichern</button>
+        <div class="two">${field('Gemarkung', inTxt('Gemarkung', w.Gemarkung, 'z. B. Nierstein'))}${field('Flur', inTxt('Flur', w.Flur, 'z. B. 5'))}</div>
+        <div class="two">${field('Flurstück(e)', inTxt('Flurstueck', w.Flurstueck, 'z. B. 123/4, 125'))}${field('Rebsorte', inTxt('Rebsorte', w.Rebsorte))}</div>
+        <details class="more"${id ? ' open' : ''}><summary>Weitere Angaben (optional)</summary>
+        <div class="two">${field('Lage', inTxt('Lage', w.Lage, 'Weinlage'))}${field('Pflanzjahr', inNum('Pflanzjahr', num(w.Pflanzjahr), '', '1'))}</div>
+        <div class="two">${field('Fläche (ha)', inNum('Flaeche_ha', num(w.Flaeche_ha), 'kommt vom Kataster'))}${field('Zeilenbreite (m)', inNum('Zeilenbreite_m', num(w.Zeilenbreite_m) || 2))}</div>
+        <div class="two">${field('Stockabstand (m)', inNum('Stockabstand_m', num(w.Stockabstand_m), 'optional'))}${field('Anzahl Reihen', inNum('Reihen_Anzahl', num(w.Reihen_Anzahl), 'nur ohne Karte', '1'))}</div>
+        ${field('Bemerkung', inTxt('Bemerkung', w.Bemerkung))}</details>
+        <button class="btn" type="submit">${id ? 'Speichern' : 'Weiter: Umriss holen'}</button>
         ${id ? `<button class="btn sec" type="button" onclick="App.openKarte('${esc(id)}')">🗺️ Umriss & Reihen auf der Karte</button>` : ''}
         <button class="btn sec" type="button" onclick="App.closeSheet()">Abbrechen</button></form>`);
   }
@@ -1088,11 +1093,13 @@ const App = (() => {
     delete w._pending;
     queueOp({ weinberg: w }, 'Weinberg gespeichert');
     frameCache.clear();
-    if (!id && !num(fd.Reihen_Anzahl)) openKarte(w.Weinberg_ID); else openWeinberg(w.Weinberg_ID);
+    if (!id && !num(fd.Reihen_Anzahl)) openKarte(w.Weinberg_ID, true); else openWeinberg(w.Weinberg_ID);
   }
 
   /* ---------- Karte: Umriss & Reihen ---------- */
   let K = null;
+  const WFS = 'https://geo5.service24.rlp.de/wfs/alkis_rp.fcgi';
+  const xmlEsc = s => String(s).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c]));
   function loadLeaflet(){
     if (window.L) return Promise.resolve();
     return new Promise((ok, fail) => {
@@ -1100,12 +1107,49 @@ const App = (() => {
       const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; sc.onload = ok; sc.onerror = fail; document.head.appendChild(sc);
     });
   }
-  async function openKarte(id){
+  /* Flurstücke beim Landesamt (LVermGeo RLP, Open Data) abfragen – direkt oder über das Google-Skript */
+  async function wfsFetch(params){
+    const q = 'SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=ave:Flurstueck&SRSNAME=urn:ogc:def:crs:EPSG::4326&COUNT=30&' + params;
+    try { const r = await fetch(WFS + '?' + q); if (!r.ok) throw new Error('HTTP ' + r.status); return await r.text(); }
+    catch (e) {
+      if (!(S.settings.url && S.settings.token)) throw new Error('Kataster nicht erreichbar. Mit Internet erneut versuchen' + (S.demo ? ' (oder erst mit Google verbinden).' : '.'));
+      const r = await fetch(S.settings.url + '?token=' + encodeURIComponent(S.settings.token) + '&wfs=' + encodeURIComponent(q));
+      const j = await r.json(); if (!j.ok) throw new Error(j.error || 'Fehler beim Kataster'); return j.xml;
+    }
+  }
+  function parseFlst(xml){
+    const doc = new DOMParser().parseFromString(xml, 'text/xml'), T = (el, n) => el.getElementsByTagNameNS('*', n);
+    const ex = T(doc, 'ExceptionText')[0]; if (ex) throw new Error(ex.textContent.trim());
+    return Array.from(T(doc, 'Flurstueck')).map(f => {
+      const g = n => { const e = T(f, n)[0]; return e ? e.textContent.trim() : ''; };
+      const rings = Array.from(T(f, 'exterior')).map(x => {
+        const pl = T(x, 'posList')[0];
+        const nums = (pl ? pl.textContent : Array.from(T(x, 'pos')).map(p => p.textContent).join(' ')).trim().split(/\s+/).map(Number);
+        const pts = [];
+        for (let i = 0; i + 1 < nums.length; i += 2) { let a = nums[i], b = nums[i+1]; if (a < b) [a, b] = [b, a]; pts.push([+a.toFixed(7), +b.toFixed(7)]); } // RLP: Breite (~49–51) > Länge (~6–8)
+        if (pts.length > 1 && pts[0][0] === pts[pts.length-1][0] && pts[0][1] === pts[pts.length-1][1]) pts.pop();
+        return pts;
+      }).filter(r => r.length >= 3);
+      if (!rings.length) return null;
+      const area = r => { const P = proj(r); return areaM2(r.map(P.to)); };
+      const poly = rings.sort((a, b) => area(b) - area(a))[0];
+      const nen = g('flstnrnen');
+      return { id: g('flstkennz') || (g('gemarkung') + g('flur') + g('flstnrzae') + '/' + nen), gemarkung: g('gemarkung'), flur: g('flur').replace(/^Flur\s*/i, ''),
+        nr: g('flstnrzae') + (nen ? '/' + nen : ''), flaeche: num(g('flaeche')), lage: g('lagebeztxt'), nutzung: g('tntxt').split('|').map(s => s.split(';')[0]).filter((v, i, a) => a.indexOf(v) === i).join(', '), kreis: g('kreis'), poly };
+    }).filter(Boolean);
+  }
+  function inPoly(pt, poly){ let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const a = poly[i], b = poly[j];
+    if ((a[1] > pt[1]) !== (b[1] > pt[1]) && pt[0] < (b[0] - a[0]) * (pt[1] - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; }
+  const kPolys = () => K.mode === 'hand' ? (K.pts.length >= 3 ? [K.pts] : []) : K.parcels.map(p => p.poly);
+
+  async function openKarte(id, auto){
     const w = wbById(id); if (!w) return;
-    const poly = jparse(w.Umriss, []);
-    K = { id, pts: poly.slice(), line: [], ang: num(w.Zeilenrichtung_Grad), sp: num(w.Zeilenbreite_m) || 2, off: num(w.Versatz_m) || 0, step: poly.length >= 3 ? 'reihen' : 'umriss' };
+    const polys = polysOf(w.Umriss).filter(p => p.length >= 3);
+    K = { id, mode: 'flst', parcels: polys.map((p, i) => ({ id: 'alt' + i, poly: p, nr: 'bisheriger Umriss' })), pts: [], line: [], hits: null, busy: false, msg: '',
+      ang: num(w.Zeilenrichtung_Grad), sp: num(w.Zeilenbreite_m) || 2, off: num(w.Versatz_m) || 0, step: polys.length ? 'reihen' : 'umriss',
+      q: { gem: w.Gemarkung || '', flur: w.Flur || '', nr: w.Flurstueck || '' } };
     openSheet(`<h2>${esc(w.Name)}: Umriss & Reihen</h2><p class="lead" id="kHint"></p><div id="map">Karte lädt …</div><div id="kCtl"></div>`);
-    try { await loadLeaflet(); } catch (e) { $('#map').innerHTML = '<p class="note" style="margin:12px">Die Karte braucht Internet. Zu Hause mit WLAN öffnen – danach funktionieren die Reihen auch offline.</p>'; return; }
+    try { await loadLeaflet(); } catch (e) { $('#map').innerHTML = '<p class="note" style="margin:12px">Die Karte braucht Internet. Mit Empfang oder WLAN öffnen – danach funktionieren die Reihen auch offline.</p>'; return; }
     const yr = new Date().getFullYear();
     const map = K.map = L.map('map', { zoomControl: true, attributionControl: true });
     const esri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20, maxNativeZoom: 19, attribution: 'Luftbild © Esri, Maxar' });
@@ -1116,53 +1160,115 @@ const App = (() => {
     L.control.layers({ 'Luftbild (Esri)': esri, 'Luftbild RLP': rlp, 'Karte': osm }, { 'Flurstücke RLP': flur }).addTo(map);
     map.on('baselayerchange', e => { S.ui.mapLayer = e.layer === rlp ? 'rlp' : e.layer === osm ? 'osm' : 'esri'; save(); });
     K.lyr = L.layerGroup().addTo(map);
-    const others = wbList().flatMap(x => jparse(x.Umriss, []));
-    if (K.pts.length >= 3) map.fitBounds(K.pts, { padding: [20, 20] });
+    const others = wbList().flatMap(x => polysOf(x.Umriss).flat());
+    if (polys.length) map.fitBounds(polys.flat(), { padding: [20, 20] });
+    else if (S.ui.mapView) map.setView(S.ui.mapView.c, S.ui.mapView.z);
     else if (others.length) map.fitBounds(others, { padding: [40, 40] });
-    else map.setView([49.85, 8.2], 15);
+    else map.setView([49.85, 8.2], 13);
+    map.on('moveend', () => { if (K && K.map) { const c = map.getCenter(); S.ui.mapView = { c: [c.lat, c.lng], z: map.getZoom() }; save(); } });
     map.on('click', e => { const p = [+e.latlng.lat.toFixed(7), +e.latlng.lng.toFixed(7)];
-      if (K.step === 'umriss') K.pts.push(p); else if (K.step === 'richtung') { K.line.push(p); if (K.line.length > 2) K.line = K.line.slice(-2); } kDraw(); });
+      if (K.step === 'umriss') { if (K.mode === 'hand') { K.pts.push(p); kDraw(); } else kTap(p); }
+      else if (K.step === 'richtung') { K.line.push(p); if (K.line.length > 2) K.line = K.line.slice(-2); kDraw(); } });
     setTimeout(() => map.invalidateSize(), 320);
     kDraw();
+    if (auto && !polys.length && K.q.gem && K.q.nr) kSearch();
   }
+  function kFit(){ const pts = kPolys().flat(); if (pts.length) K.map.fitBounds(pts, { padding: [24, 24], maxZoom: 19 }); }
+  function kAddParcel(p){
+    if (K.parcels.some(x => x.id === p.id)) { K.parcels = K.parcels.filter(x => x.id !== p.id); K.msg = `Flurstück ${p.nr} entfernt`; }
+    else { K.parcels = K.parcels.filter(x => !String(x.id).startsWith('alt')); K.parcels.push(p); K.msg = `Flurstück ${p.nr} übernommen${p.nutzung ? ' (' + p.nutzung + ')' : ''}`; }
+  }
+  async function kTap(p){
+    if (K.busy) return; K.busy = true; K.msg = 'Flurstück wird geholt …'; kDraw();
+    try {
+      const d = 0.00002, list = parseFlst(await wfsFetch(`BBOX=${p[0]-d},${p[1]-d},${p[0]+d},${p[1]+d},urn:ogc:def:crs:EPSG::4326`));
+      const hit = list.filter(f => inPoly(p, f.poly)).sort((a, b) => (a.flaeche || 0) - (b.flaeche || 0))[0] || list[0];
+      if (!hit) K.msg = 'Dort wurde kein Flurstück gefunden.'; else kAddParcel(hit);
+    } catch (e) { K.msg = '⚠️ ' + e.message; }
+    K.busy = false; kDraw();
+  }
+  async function kSearch(){
+    const gem = K.q.gem.trim(), flur = String(K.q.flur).trim().replace(/^Flur\s*/i, ''), nrs = String(K.q.nr).split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+    if (!gem || !nrs.length) { K.msg = 'Bitte Gemarkung und Flurstücksnummer eintragen.'; return kDraw(); }
+    K.busy = true; K.msg = 'Suche im Kataster …'; K.hits = null; kDraw();
+    const found = [], amb = [];
+    try {
+      for (const nr of nrs) {
+        const [z, n] = nr.split('/').map(s => s.trim());
+        const eq = (pre, k, v) => `<fes:PropertyIsEqualTo><fes:ValueReference>${pre}${k}</fes:ValueReference><fes:Literal>${xmlEsc(v)}</fes:Literal></fes:PropertyIsEqualTo>`;
+        const filt = pre => `<fes:Filter xmlns:fes="http://www.opengis.net/fes/2.0" xmlns:ave="http://repository.gdi-de.org/schemas/adv/produkt/alkis-vereinfacht/2.0"><fes:And>${eq(pre, 'gemarkung', gem)}${eq(pre, 'flstnrzae', z)}${flur ? eq(pre, 'flur', 'Flur ' + flur) : ''}${n ? eq(pre, 'flstnrnen', n) : ''}</fes:And></fes:Filter>`;
+        let list;
+        try { list = parseFlst(await wfsFetch('FILTER=' + encodeURIComponent(filt('')))); }
+        catch (e) { list = parseFlst(await wfsFetch('FILTER=' + encodeURIComponent(filt('ave:')))); }
+        if (!n) { const ohne = list.filter(f => !f.nr.includes('/')); if (ohne.length) list = ohne; }
+        if (list.length === 1) found.push(list[0]); else if (list.length > 1) amb.push(...list); else K.msg = `${nr} nicht gefunden – Schreibweise der Gemarkung prüfen oder das Flurstück auf der Karte antippen.`;
+      }
+      found.forEach(f => { if (!K.parcels.some(x => x.id === f.id)) kAddParcel(f); });
+      if (found.length) { K.msg = `${found.length} Flurstück${found.length > 1 ? 'e' : ''} übernommen – passt der Umriss?`; kFit(); }
+      if (amb.length) { K.hits = amb; K.msg = 'Mehrere Treffer – bitte das richtige wählen:'; }
+    } catch (e) { K.msg = '⚠️ ' + e.message; }
+    K.busy = false; kDraw();
+  }
+  function kPick(i){ const f = K.hits && K.hits[i]; if (!f) return; K.hits = null; kAddParcel(f); kFit(); kDraw(); }
+  function kDel(i){ K.parcels.splice(i, 1); K.msg = ''; kDraw(); }
+  function kMode(m){ K.mode = m; K.msg = ''; kDraw(); }
+  function kQ(k, v){ K.q[k] = v; }
   function kRows(){
-    const P = proj(K.pts), xy = K.pts.map(P.to);
-    if (K.ang == null) K.ang = longestEdgeAngle(xy);
-    const rows = genRows(xy, K.ang, K.sp, K.off);
-    return { rows: rows.map(r => [...P.from(r[0]), ...P.from(r[1])]), area: areaM2(xy) };
+    const polys = kPolys(), P = proj(polys.flat()), xys = polys.map(p => p.map(P.to));
+    if (K.ang == null) { const big = xys.slice().sort((a, b) => areaM2(b) - areaM2(a))[0]; K.ang = longestEdgeAngle(big); }
+    const a = K.ang * Math.PI / 180, nrm = [-Math.sin(a), Math.cos(a)], dir = [Math.cos(a), Math.sin(a)];
+    const rows = xys.flatMap(xy => genRows(xy, K.ang, K.sp, K.off));
+    const key = r => [r[0][0]*nrm[0] + r[0][1]*nrm[1], Math.min(r[0][0]*dir[0] + r[0][1]*dir[1], r[1][0]*dir[0] + r[1][1]*dir[1])];
+    rows.sort((x, y) => { const kx = key(x), ky = key(y); return (ky[0] - kx[0]) || (kx[1] - ky[1]); });
+    return { rows: rows.map(r => [...P.from(r[0]), ...P.from(r[1])]), area: xys.reduce((s, xy) => s + areaM2(xy), 0) };
   }
   function kDraw(){
     if (!K || !K.map) return;
     K.lyr.clearLayers();
-    const done = K.step !== 'umriss';
-    if (K.pts.length) L.polygon(K.pts, { color: '#F5EFE6', weight: 2, fillColor: '#F5EFE6', fillOpacity: done ? 0.08 : 0.18, dashArray: done ? null : '6 6' }).addTo(K.lyr);
-    if (K.step === 'umriss') K.pts.forEach(p => L.circleMarker(p, { radius: 6, color: '#fff', weight: 2, fillColor: '#6E1F2F', fillOpacity: 1 }).addTo(K.lyr));
+    const done = K.step !== 'umriss', polys = kPolys();
+    polys.forEach(p => L.polygon(p, { color: '#F5EFE6', weight: 2.5, fillColor: '#F0B35A', fillOpacity: done ? 0.06 : 0.25, dashArray: K.mode === 'hand' && !done ? '6 6' : null, interactive: false }).addTo(K.lyr));
+    if (K.step === 'umriss' && K.mode === 'hand') K.pts.forEach(p => L.circleMarker(p, { radius: 6, color: '#fff', weight: 2, fillColor: '#6E1F2F', fillOpacity: 1 }).addTo(K.lyr));
+    if (K.step === 'umriss' && K.hits) K.hits.forEach(h => L.polygon(h.poly, { color: '#5BC0EB', weight: 2, fillOpacity: .15, interactive: false }).addTo(K.lyr));
     if (K.step === 'richtung' && K.line.length) { L.polyline(K.line, { color: '#F0B35A', weight: 4 }).addTo(K.lyr); K.line.forEach(p => L.circleMarker(p, { radius: 6, color: '#fff', weight: 2, fillColor: '#F0B35A', fillOpacity: 1 }).addTo(K.lyr)); }
     let info = '';
-    if (K.step === 'reihen' && K.pts.length >= 3) { const r = kRows(); K.rowsLL = r.rows; K.area = r.area;
-      r.rows.forEach((x, i) => L.polyline([[x[0], x[1]], [x[2], x[3]]], { color: i === 0 ? '#F0B35A' : '#FFFFFF', weight: 2, opacity: .9 }).addTo(K.lyr));
+    if (K.step === 'reihen' && polys.length) { const r = kRows(); K.rowsLL = r.rows; K.area = r.area;
+      r.rows.forEach((x, i) => L.polyline([[x[0], x[1]], [x[2], x[3]]], { color: i === 0 ? '#F0B35A' : '#FFFFFF', weight: 2, opacity: .9, interactive: false }).addTo(K.lyr));
       info = `<b>${r.rows.length} Reihen</b> · ${fmtNum(r.area / 10000, 3)} ha · Zeilenbreite ${fmtNum(K.sp, 2)} m · Winkel ${fmtNum(((K.ang % 180) + 180) % 180, 1)}°`; }
-    const H = { umriss: 'Schritt 1/3: Tippe die Ecken des Weinbergs der Reihe nach an. Die Flurstücksgrenzen helfen dabei.',
-      richtung: 'Schritt 2/3: Tippe zwei Punkte entlang einer Rebzeile (Anfang und Ende einer Reihe).', reihen: 'Schritt 3/3: Passen die Reihen? Mit den Knöpfen fein ausrichten, bis die weißen Linien auf den Zeilen liegen.' };
+    const H = { umriss: K.mode === 'hand' ? 'Schritt 1/3: Tippe die Ecken des Weinbergs der Reihe nach an.' : 'Schritt 1/3: Flurstück eintragen und suchen – oder einfach auf der Karte auf das Flurstück tippen. Mehrere gehen auch.',
+      richtung: 'Schritt 2/3: Tippe zwei Punkte entlang einer Rebzeile (Anfang und Ende einer Reihe) – oder überspringen, dann nimmt die App die längste Kante.', reihen: 'Schritt 3/3: Passen die Reihen? Mit den Knöpfen ausrichten, bis die weißen Linien auf den Zeilen liegen.' };
     $('#kHint').textContent = H[K.step];
-    const B = (t, f) => `<button type="button" onclick="${f}">${t}</button>`;
-    $('#kCtl').innerHTML = K.step === 'umriss'
-      ? `<div class="mapctl">${B('↶ Punkt zurück', 'App.kUndo()')}${B('📍 Mein Standort', 'App.kGps()')}</div><button class="btn" onclick="App.kStep('richtung')" ${K.pts.length < 3 ? 'disabled style="opacity:.45"' : ''}>Weiter: Zeilenrichtung</button>`
-      : K.step === 'richtung'
-      ? `<div class="mapctl">${B('↶ Zurück zum Umriss', "App.kStep('umriss')")}</div><button class="btn" onclick="App.kStep('reihen')">${K.line.length === 2 ? 'Weiter: Reihen prüfen' : 'Überspringen (längste Kante)'}</button>`
-      : `<p class="note" style="margin:10px 0">${info}</p>
+    const B = (t, f, on) => `<button type="button" class="${on ? 'on' : ''}" onclick="${f}">${t}</button>`;
+    const msg = K.msg ? `<p class="note${K.msg.startsWith('⚠️') ? ' warn' : ''}" style="margin:10px 0">${esc(K.msg)}</p>` : '';
+    if (K.step === 'umriss') {
+      const ha = K.parcels.reduce((s, p) => s + (p.flaeche || 0), 0);
+      $('#kCtl').innerHTML = `<div class="mapctl">${B('Flurstück', "App.kMode('flst')", K.mode === 'flst')}${B('Ecken selbst setzen', "App.kMode('hand')", K.mode === 'hand')}</div>` +
+        (K.mode === 'flst' ? `<form class="flst" onsubmit="event.preventDefault();App.kSearch()">
+            <input placeholder="Gemarkung" value="${esc(K.q.gem)}" oninput="App.kQ('gem',this.value)" autocapitalize="words">
+            <input placeholder="Flur" value="${esc(K.q.flur)}" oninput="App.kQ('flur',this.value)" inputmode="numeric" style="max-width:70px">
+            <input placeholder="Nr. z. B. 123/4" value="${esc(K.q.nr)}" oninput="App.kQ('nr',this.value)" style="max-width:120px">
+            <button class="btn small" type="submit" ${K.busy ? 'disabled' : ''}>${K.busy ? '…' : 'Suchen'}</button></form>${msg}
+            ${K.hits ? `<div class="card">${K.hits.map((h, i) => `<button class="row" onclick="App.kPick(${i})"><div class="main"><div class="title">${esc(h.gemarkung)} · Flur ${esc(h.flur)} · ${esc(h.nr)}</div><div class="sub">${esc(h.kreis)}${h.lage ? ' · ' + esc(h.lage) : ''}${h.flaeche ? ' · ' + fmtNum(h.flaeche, 0) + ' m²' : ''}</div></div></button>`).join('')}</div>` : ''}
+            ${K.parcels.length ? `<div class="card" style="margin-top:8px">${K.parcels.map((p, i) => `<div class="row"><div class="main"><div class="title">${p.gemarkung ? esc(p.gemarkung) + ' · Flur ' + esc(p.flur) + ' · ' : ''}${esc(p.nr)}</div><div class="sub">${[p.flaeche ? fmtNum(p.flaeche, 0) + ' m²' : '', esc(p.lage || ''), esc(p.nutzung || '')].filter(Boolean).join(' · ')}</div></div><button class="btn sec small" style="width:auto;margin:0" onclick="App.kDel(${i})">✕</button></div>`).join('')}</div>
+              ${ha ? `<p class="note" style="margin:8px 0">Amtliche Fläche zusammen: <b>${fmtNum(ha / 10000, 4)} ha</b></p>` : ''}` : ''}`
+          : `${msg}<div class="mapctl">${B('↶ Punkt zurück', 'App.kUndo()')}${B('📍 Mein Standort', 'App.kGps()')}</div>`) +
+        `<button class="btn" onclick="App.kStep('richtung')" ${polys.length ? '' : 'disabled style="opacity:.45"'}>Weiter: Zeilenrichtung</button>`;
+    } else if (K.step === 'richtung') {
+      $('#kCtl').innerHTML = `<div class="mapctl">${B('↶ Zurück zum Umriss', "App.kStep('umriss')")}</div><button class="btn" onclick="App.kStep('reihen')">${K.line.length === 2 ? 'Weiter: Reihen prüfen' : 'Überspringen (längste Kante)'}</button>`;
+    } else {
+      $('#kCtl').innerHTML = `<p class="note" style="margin:10px 0">${info}</p>
          <div class="mapctl">${B('⟲ −1°', 'App.kAdj("ang",-1)')}${B('−0,2°', 'App.kAdj("ang",-0.2)')}${B('+0,2°', 'App.kAdj("ang",0.2)')}${B('⟳ +1°', 'App.kAdj("ang",1)')}</div>
          <div class="mapctl">${B('◀ Versatz', 'App.kAdj("off",-0.2)')}${B('Versatz ▶', 'App.kAdj("off",0.2)')}${B('Zeile enger', 'App.kAdj("sp",-0.05)')}${B('Zeile weiter', 'App.kAdj("sp",0.05)')}</div>
-         <div class="mapctl">${B('Richtung neu', "App.kStep('richtung')")}${B('Umriss neu', 'App.kNew()')}</div>
+         <div class="mapctl">${B('Richtung neu', "App.kStep('richtung')")}${B('Umriss ändern', "App.kStep('umriss')")}</div>
          ${S.snap.arbeiten.some(a => a.Weinberg_ID === K.id) ? '<p class="note warn">Achtung: Wenn sich die Zahl der Reihen ändert, passen frühere Markierungen evtl. nicht mehr genau.</p>' : ''}
          <button class="btn" onclick="App.kSave()">Umriss & Reihen speichern</button>`;
+    }
   }
   function kStep(s){
-    if (s === 'reihen' && K.step === 'richtung' && K.line.length === 2) { const P = proj(K.pts), a = P.to(K.line[0]), b = P.to(K.line[1]); K.ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI; K.off = 0; }
-    if (s === 'richtung') K.line = [];
-    K.step = s; kDraw();
+    if (s === 'reihen' && K.step === 'richtung' && K.line.length === 2) { const P = proj(kPolys().flat()), a = P.to(K.line[0]), b = P.to(K.line[1]); K.ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI; K.off = 0; }
+    if (s === 'richtung') { K.line = []; if (K.step === 'umriss') K.ang = null; }
+    K.step = s; K.msg = ''; kDraw();
   }
-  function kNew(){ K.pts = []; K.ang = null; K.step = 'umriss'; kDraw(); }
+  function kNew(){ K.pts = []; K.parcels = []; K.ang = null; K.step = 'umriss'; kDraw(); }
   function kUndo(){ K.pts.pop(); kDraw(); }
   function kGps(){
     if (!navigator.geolocation) return toast('Standort nicht verfügbar');
@@ -1172,8 +1278,13 @@ const App = (() => {
   function kAdj(k, v){ if (k === 'ang') K.ang += v; if (k === 'off') K.off += v; if (k === 'sp') K.sp = Math.max(0.8, +(K.sp + v).toFixed(2)); kDraw(); }
   function kSave(){
     const w = wbById(K.id); if (!w || !K.rowsLL) return;
-    const upd = Object.assign({}, w, { Umriss: JSON.stringify(K.pts), Reihen: JSON.stringify(K.rowsLL.map(r => r.map(v => +v.toFixed(7)))), Reihen_Anzahl: K.rowsLL.length,
-      Zeilenrichtung_Grad: +K.ang.toFixed(2), Versatz_m: +K.off.toFixed(2), Zeilenbreite_m: K.sp, Flaeche_ha: num(w.Flaeche_ha) || +(K.area / 10000).toFixed(4) });
+    const polys = kPolys(), alk = K.mode === 'flst' ? K.parcels.filter(p => p.gemarkung) : [];
+    const alkHa = alk.reduce((s, p) => s + (p.flaeche || 0), 0) / 10000;
+    const upd = Object.assign({}, w, { Umriss: JSON.stringify(polys.length === 1 ? polys[0] : polys), Reihen: JSON.stringify(K.rowsLL.map(r => r.map(v => +v.toFixed(7)))), Reihen_Anzahl: K.rowsLL.length,
+      Zeilenrichtung_Grad: +K.ang.toFixed(2), Versatz_m: +K.off.toFixed(2), Zeilenbreite_m: K.sp,
+      Flaeche_ha: alk.length ? +alkHa.toFixed(4) : (num(w.Flaeche_ha) || +(K.area / 10000).toFixed(4)) });
+    if (alk.length) { upd.Gemarkung = [...new Set(alk.map(p => p.gemarkung))].join(', '); upd.Flur = [...new Set(alk.map(p => p.flur))].join(', ');
+      upd.Flurstueck = alk.map(p => p.nr).join(', '); if (!upd.Lage && alk[0].lage) upd.Lage = alk[0].lage; }
     delete upd._pending;
     queueOp({ weinberg: upd }, `${K.rowsLL.length} Reihen gespeichert`);
     frameCache.clear(); try { K.map.remove(); } catch (e) {} K = null;
@@ -1357,7 +1468,7 @@ const App = (() => {
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 
-  return { init, go, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
+  return { init, go, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
 })();
 App.init();
 </script>
