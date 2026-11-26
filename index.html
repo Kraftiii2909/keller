@@ -151,7 +151,14 @@ input:focus,select:focus,textarea:focus{outline:2px solid rgba(110,31,47,.35);bo
 .chips button i{width:10px;height:10px;border-radius:50%;display:inline-block}
 .chips button.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .wb-box{background:#F3EBDF;border-radius:var(--radius);padding:8px;touch-action:none;user-select:none;-webkit-user-select:none;position:relative}
-.wb-box svg{width:100%;display:block;max-height:58vh}
+.wb-box svg{width:100%;display:block}.wb-box.list{touch-action:auto}.wb-box.erase{outline:2px dashed #B4452A;outline-offset:-2px}
+.rlist{display:flex;flex-direction:column;gap:4px;max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.rrow{display:flex;align-items:center;gap:8px}.rrow b{width:26px;text-align:right;font-size:13px;color:var(--muted)}.rrow small{width:42px;font-size:11px;color:var(--muted)}
+.track{position:relative;height:38px;background:#E2D6C4;border-radius:8px;touch-action:pan-y;overflow:hidden}
+.track i{position:absolute;top:0;bottom:0;border-radius:6px}.track i.done{opacity:.45;top:8px;bottom:8px}.track i.new{top:3px;bottom:3px;box-shadow:0 0 0 2px #fff inset}
+.track i.pv{background:rgba(255,255,255,.7);top:3px;bottom:3px;outline:2px dashed var(--ink)}
+.del{width:auto!important;margin:0!important;padding:6px 10px!important}.del.danger{background:#B4452A;color:#fff;border-color:#B4452A}
+#wbTools button:disabled{opacity:.4}
 .prog{display:flex;justify-content:space-between;align-items:baseline;margin:10px 2px 4px;font-size:15px}
 .prog b{font-family:var(--serif);font-size:22px}
 .btnrow{display:flex;gap:8px}.btnrow .btn{margin-top:8px}
@@ -689,6 +696,7 @@ const App = (() => {
     const upsert = (arr, key, obj) => { const i = arr.findIndex(x => x[key] === obj[key]); if (i >= 0) arr[i] = Object.assign({}, arr[i], obj); else arr.push(Object.assign({}, obj)); };
     if (op.weinberg) upsert(S.snap.weinberge, 'Weinberg_ID', op.weinberg);
     if (op.mittel) upsert(S.snap.mittel, 'Mittel', op.mittel);
+    if (op.del_arbeit) S.snap.arbeiten = S.snap.arbeiten.filter(x => x.Arbeit_ID !== op.del_arbeit);
     (op.arbeiten || []).forEach(a => { if (!S.snap.arbeiten.some(x => x.Arbeit_ID === a.Arbeit_ID)) S.snap.arbeiten.push(Object.assign({ _pending: true }, a)); });
     (op.ps || []).forEach(a => { if (!S.snap.ps.some(x => x.PS_ID === a.PS_ID)) S.snap.ps.push(Object.assign({ _pending: true }, a)); });
     if (op.partie && !wein(op.partie.Weinnummer)) S.snap.partien.push(Object.assign({}, op.partie));
@@ -918,7 +926,7 @@ const App = (() => {
 
   /* ---------- Zeichnen ---------- */
   function wbSVG(w, o = {}){
-    const f = frame(w);
+    const f = o.frame || frame(w);
     if (!f) return `<svg viewBox="0 0 100 60"><text x="50" y="34" text-anchor="middle" font-size="9" fill="#A99C92">noch keine Reihen</text></svg>`;
     const allP = f.polys.flat(), xs = allP.map(p => p[0]).concat(f.rows.flatMap(r => [r.x0, r.x1])), ys = allP.map(p => p[1]).concat(f.rows.map(r => r.y));
     const pad = f.sp * 1.2, x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad, W = Math.max(...xs) - x0 + pad, H = Math.max(...ys) - y0 + pad;
@@ -997,7 +1005,8 @@ const App = (() => {
   /* ---------- Weinberg öffnen & wischen ---------- */
   function openWeinberg(id){
     const w = wbById(id); if (!w) return toast('Weinberg nicht gefunden');
-    if (wbUI.id !== id) wbUI.marks = [];
+    if (wbUI.id !== id) { wbUI.marks = []; wbUI.erase = false; }
+    wbUI.list = !!S.ui.wbList;
     wbUI.id = id;
     const f = frame(w);
     const hist = S.snap.arbeiten.filter(a => a.Weinberg_ID === id).sort((a, b) => String(b.Datum).localeCompare(String(a.Datum))).slice(0, 30);
@@ -1005,41 +1014,100 @@ const App = (() => {
       <p class="lead">${[esc(w.Lage || ''), w.Flurstueck ? 'Flst. ' + esc(w.Flurstueck) : '', esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f ? f.rows.length + ' Reihen' : ''].filter(Boolean).join(' · ')}</p>
       ${f ? `${arbeitChips(wbUI.arbeit, 'wbArbeit')}
       <div class="prog" id="wbProg"></div>
+      <div class="mapctl" id="wbTools"><button type="button" data-v="map" onclick="App.wbView('map')">Übersicht</button><button type="button" data-v="list" onclick="App.wbView('list')">Einzeln</button>
+        <button type="button" id="wbErase" onclick="App.wbEraseToggle()">🧽 Radieren</button><button type="button" id="wbUndoBtn" onclick="App.wbUndo()">↶</button></div>
       <div class="wb-box" id="wbBox"></div>
-      <p class="note" style="margin-top:8px">Mit dem Finger über die Reihen wischen, die du geschafft hast. <b>Quer</b> über die Reihen = ganze Reihen, <b>längs</b> einer Reihe = nur dieses Stück.</p>
+      <p class="note" style="margin-top:8px" id="wbHelp">${wbUI.list ? '<b>Tippen</b> = ganze Reihe an/aus · <b>waagerecht ziehen</b> = nur ein Stück · hoch/runter = blättern.' : '<b>Quer</b> über die Reihen wischen = ganze Reihen · <b>längs</b> einer Reihe = nur ein Stück · <b>Tippen</b> = eine Reihe. Für einzelne Reihen und Stücke: „Einzeln“.'}</p>
       <form id="frm" onsubmit="event.preventDefault();App.wbSave()"><p id="frmErr" class="note warn" hidden></p>
         <div class="two">${field('Datum', `<input name="Datum" type="date" value="${today()}">`)}${field('Stunden', inNum('Stunden', null, 'optional'))}</div>
         ${field('Notiz', inTxt('Notiz', '', 'optional'))}
-        <div class="btnrow"><button class="btn sec small" type="button" onclick="App.wbUndo()">↶ Zurück</button><button class="btn sec small" type="button" onclick="App.wbAll()">Ganzer Weinberg</button></div>
+        <div class="btnrow"><button class="btn sec small" type="button" onclick="App.wbAll()">Ganzer Weinberg</button></div>
         <button class="btn" type="submit" id="wbSaveBtn">Speichern</button></form>`
       : `<p class="note">Für diesen Weinberg sind noch keine Reihen angelegt. Zeichne den Umriss auf der Karte – oder trag unter „Daten bearbeiten“ einfach die Anzahl der Reihen ein.</p>`}
       <div class="btnrow"><button class="btn sec small" onclick="App.openKarte('${esc(id)}')">🗺️ Umriss & Reihen</button><button class="btn sec small" onclick="App.wbEdit('${esc(id)}')">✏️ Daten bearbeiten</button></div>
-      ${hist.length ? `<div class="log-day" style="margin-top:16px">Letzte Arbeiten</div><div class="card">${hist.map(a => `<div class="row"><span class="swatch" style="background:${arbeitFarbe(a.Arbeit)}"></span><div class="main"><div class="title">${esc(a.Arbeit)}</div><div class="sub">${fmtDate(a.Datum)} · ${fmtNum(a.Anteil_Prozent, 0)} %${num(a.Stunden) ? ' · ' + fmtNum(a.Stunden) + ' h' : ''}${a.Person ? ' · ' + esc(a.Person) : ''}${a.Notiz ? ' · ' + esc(a.Notiz) : ''}</div></div></div>`).join('')}</div>` : ''}`);
+      ${hist.length ? `<div class="log-day" style="margin-top:16px">Letzte Arbeiten</div><div class="card">${hist.map(a => `<div class="row"><span class="swatch" style="background:${arbeitFarbe(a.Arbeit)}"></span><div class="main"><div class="title">${esc(a.Arbeit)}</div><div class="sub">${fmtDate(a.Datum)} · ${fmtNum(a.Anteil_Prozent, 0)} %${num(a.Stunden) ? ' · ' + fmtNum(a.Stunden) + ' h' : ''}${a.Person ? ' · ' + esc(a.Person) : ''}${a.Notiz ? ' · ' + esc(a.Notiz) : ''}</div></div>${a.Arbeit === 'Pflanzenschutz' ? '' : `<button class="btn sec small del" onclick="App.wbDelArbeit('${esc(a.Arbeit_ID)}',this)">🗑</button>`}</div>`).join('')}</div>` : ''}`);
     if (f) wbDraw();
   }
   function wbArbeit(a){ wbUI.arbeit = a; document.querySelectorAll('#sheetBody .chips button').forEach(b => b.classList.toggle('on', b.textContent.trim() === a)); wbDraw(); }
+  /* Markierungen: Liste von Gesten {segs, erase}; daraus die Netto-Markierung */
+  function subIv(iv, a, b){ const out = []; iv.forEach(([x, y]) => { if (y <= a || x >= b) out.push([x, y]); else { if (x < a) out.push([x, a]); if (y > b) out.push([b, y]); } }); return out.filter(v => v[1] - v[0] > 0.005); }
+  function netMap(){
+    const m = new Map();
+    wbUI.marks.forEach(g => g.segs.forEach(([i, a, b]) => { const iv = m.get(i) || []; m.set(i, g.erase ? subIv(iv, a, b) : mergeIv(iv.concat([[a, b]]))); }));
+    m.forEach((v, k) => { if (!v.length) m.delete(k); });
+    return m;
+  }
+  const netSegs = () => Array.from(netMap().entries()).flatMap(([i, iv]) => iv.map(x => [i, +x[0].toFixed(3), +x[1].toFixed(3)]));
+  /* Für die große Ansicht die Reihen auseinanderziehen, damit man sie mit dem Finger trifft */
+  function bigFrame(f, boxW){
+    const allX = f.polys.flat().map(p => p[0]).concat(f.rows.flatMap(r => [r.x0, r.x1]));
+    const W = Math.max(...allX) - Math.min(...allX) + f.sp * 5, pxPerM = boxW / W;
+    const rows = f.rows.length, wantPx = 18, maxH = Math.min(560, window.innerHeight * 0.62);
+    let k = Math.max(1, wantPx / (f.sp * pxPerM));
+    const allY = f.polys.flat().map(p => p[1]), hPx = (Math.max(...allY) - Math.min(...allY) + f.sp * 2.4) * pxPerM;
+    if (hPx * k > maxH) k = Math.max(1, maxH / hPx);
+    return { k, rowPx: f.sp * k * pxPerM, f: { rows: f.rows.map(r => Object.assign({}, r, { y: r.y * k })), polys: f.polys.map(pl => pl.map(p => [p[0], p[1] * k])), sp: f.sp * k } };
+  }
   function wbDraw(){
     const w = wbById(wbUI.id), f = frame(w), box = $('#wbBox'); if (!box || !f) return;
-    const cov = coverage(w, wbUI.arbeit);
-    box.innerHTML = wbSVG(w, { big: true, arbeit: wbUI.arbeit, cov, marks: wbUI.marks });
-    const neu = segsToRows(wbUI.marks.flat()), add = pctOf(f, segsToRows(Array.from(cov.map.entries()).flatMap(([i, iv]) => iv.map(x => [i, x[0], x[1]])).concat(wbUI.marks.flat()))) - cov.pct;
-    $('#wbProg').innerHTML = `<span>${esc(wbUI.arbeit)} · ${saison().label}</span><span>${wbUI.marks.length ? `<span style="color:${arbeitFarbe(wbUI.arbeit)};font-weight:700">+${Math.max(0, add).toFixed(0)} % neu</span> · ` : ''}<b>${Math.round(cov.pct)} %</b></span>`;
-    const btn = $('#wbSaveBtn'); if (btn) { btn.disabled = !wbUI.marks.length; btn.style.opacity = wbUI.marks.length ? 1 : .45; btn.textContent = wbUI.marks.length ? `Speichern (${neu.size} Reihen)` : 'Speichern'; }
-    bindSwipe(w, f);
+    const cov = coverage(w, wbUI.arbeit), segs = netSegs(), neu = new Set(segs.map(s => s[0]));
+    const add = pctOf(f, segsToRows(Array.from(cov.map.entries()).flatMap(([i, iv]) => iv.map(x => [i, x[0], x[1]])).concat(segs))) - cov.pct;
+    $('#wbProg').innerHTML = `<span>${esc(wbUI.arbeit)} · ${saison().label}</span><span>${segs.length ? `<span style="color:${arbeitFarbe(wbUI.arbeit)};font-weight:700">+${Math.max(0, add).toFixed(0)} % neu</span> · ` : ''}<b>${Math.round(cov.pct)} %</b></span>`;
+    document.querySelectorAll('#wbTools button[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === (wbUI.list ? 'list' : 'map')));
+    const er = $('#wbErase'); if (er) er.classList.toggle('on', !!wbUI.erase);
+    const und = $('#wbUndoBtn'); if (und) und.disabled = !wbUI.marks.length;
+    const btn = $('#wbSaveBtn'); if (btn) { btn.disabled = !segs.length; btn.style.opacity = segs.length ? 1 : .45; btn.textContent = segs.length ? `Speichern (${neu.size} Reihe${neu.size === 1 ? '' : 'n'})` : 'Speichern'; }
+    box.classList.toggle('erase', !!wbUI.erase); box.classList.toggle('list', !!wbUI.list);
+    if (wbUI.list) return drawList(w, f, cov);
+    const bf = bigFrame(f, Math.max(200, box.clientWidth - 16));
+    box.innerHTML = wbSVG(w, { big: true, arbeit: wbUI.arbeit, cov, marks: [segs], frame: bf.f });
+    bindSwipe(bf.f);
   }
-  function bindSwipe(w, f){
+  /* Reihe für Reihe: große Balken, Tippen = ganze Reihe an/aus, waagerecht ziehen = Stück */
+  function drawList(w, f, cov){
+    const box = $('#wbBox'), col = arbeitFarbe(wbUI.arbeit), net = netMap(), old = box.querySelector('.rlist'), top = old ? old.scrollTop : 0;
+    const order = f.rows.map((r, i) => i).sort((a, b) => f.rows[a].y - f.rows[b].y);
+    const maxLen = Math.max(...f.rows.map(r => r.len));
+    const bar = (a, b, cls, c) => `<i class="${cls}" style="left:${(a*100).toFixed(1)}%;width:${((b-a)*100).toFixed(1)}%;background:${c}"></i>`;
+    box.innerHTML = `<div class="rlist">${order.map(i => { const r = f.rows[i];
+      return `<div class="rrow"><b>${i + 1}</b><div class="track" data-i="${i}" style="width:${Math.max(35, 100 * r.len / maxLen).toFixed(0)}%">
+        ${(cov.map.get(i) || []).map(iv => bar(iv[0], iv[1], 'done', col)).join('')}${(net.get(i) || []).map(iv => bar(iv[0], iv[1], 'new', col)).join('')}</div><small>${Math.round(r.len)} m</small></div>`; }).join('')}</div>`;
+    box.querySelector('.rlist').scrollTop = top;
+    box.querySelectorAll('.track').forEach(t => {
+      let st = null;
+      const tx = e => { const r = t.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); };
+      t.addEventListener('pointerdown', e => { st = { x: e.clientX, y: e.clientY, t0: tx(e), drag: false }; });
+      t.addEventListener('pointermove', e => { if (!st) return;
+        if (!st.drag && Math.abs(e.clientX - st.x) > 10 && Math.abs(e.clientX - st.x) > Math.abs(e.clientY - st.y)) { st.drag = true; t.setPointerCapture(e.pointerId); st.pv = document.createElement('i'); st.pv.className = 'pv'; t.appendChild(st.pv); }
+        if (st.drag) { e.preventDefault(); const a = Math.min(st.t0, tx(e)), b = Math.max(st.t0, tx(e)); st.a = a; st.b = b; st.pv.style.left = a*100 + '%'; st.pv.style.width = (b-a)*100 + '%'; } });
+      t.addEventListener('pointercancel', () => { st = null; });
+      t.addEventListener('pointerup', e => { if (!st) return; const i = +t.dataset.i;
+        if (st.drag) { let a = st.a, b = st.b; if (a < 0.03) a = 0; if (b > 0.97) b = 1; if (b - a > 0.01) addGesture([[i, +a.toFixed(3), +b.toFixed(3)]]); }
+        else if (Math.abs(e.clientY - st.y) < 10) { const iv = net.get(i) || [], full = iv.length === 1 && iv[0][0] <= 0.001 && iv[0][1] >= 0.999;
+          if (wbUI.erase || full) { if (iv.length) wbUI.marks.push({ segs: [[i, 0, 1]], erase: true }); } else wbUI.marks.push({ segs: [[i, 0, 1]], erase: false }); haptic(); wbDraw(); }
+        st = null; });
+    });
+  }
+  const haptic = () => { if (navigator.vibrate) navigator.vibrate(10); };
+  function addGesture(segs){ if (!segs.length) return; wbUI.marks.push({ segs, erase: !!wbUI.erase }); haptic(); wbDraw(); }
+  function bindSwipe(f){
     const svg = $('#wbSvg'); if (!svg) return;
     let pts = null, trail = null;
     const toXY = e => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const m = svg.getScreenCTM(); return m ? p.matrixTransform(m.inverse()) : { x: 0, y: 0 }; };
     svg.addEventListener('pointerdown', e => { e.preventDefault(); svg.setPointerCapture(e.pointerId); pts = [toXY(e)];
-      trail = document.createElementNS('http://www.w3.org/2000/svg', 'polyline'); trail.setAttribute('fill', 'none'); trail.setAttribute('stroke', arbeitFarbe(wbUI.arbeit));
-      trail.setAttribute('stroke-width', f.sp * 0.5); trail.setAttribute('stroke-linecap', 'round'); trail.setAttribute('stroke-linejoin', 'round'); trail.setAttribute('opacity', '.5'); svg.appendChild(trail); });
+      trail = document.createElementNS('http://www.w3.org/2000/svg', 'polyline'); trail.setAttribute('fill', 'none'); trail.setAttribute('stroke', wbUI.erase ? '#B4452A' : arbeitFarbe(wbUI.arbeit));
+      trail.setAttribute('stroke-width', f.sp * 0.5); trail.setAttribute('stroke-linecap', 'round'); trail.setAttribute('stroke-linejoin', 'round'); trail.setAttribute('opacity', '.5');
+      if (wbUI.erase) trail.setAttribute('stroke-dasharray', `${f.sp * 0.6} ${f.sp * 0.6}`); svg.appendChild(trail); });
     svg.addEventListener('pointermove', e => { if (!pts) return; e.preventDefault(); pts.push(toXY(e)); trail.setAttribute('points', pts.map(p => p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ')); });
-    const end = () => { if (!pts) return; const g = gesture(pts, f); pts = null; if (g.length) { wbUI.marks.push(g); if (navigator.vibrate) navigator.vibrate(10); } wbDraw(); };
+    const end = () => { if (!pts) return; const g = gesture(pts, f); pts = null; if (g.length) addGesture(g); else wbDraw(); };
     svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
   }
   function gesture(pts, f){
-    if (pts.length < 2) return [];
+    if (pts.length < 2) { // einzelner Tipp: ganze Reihe
+      const p = pts[0]; let best = -1, bd = f.sp * 0.5;
+      f.rows.forEach((r, i) => { const dy = Math.abs(r.y - p.y); if (dy < bd && p.x >= r.x0 - f.sp && p.x <= r.x1 + f.sp) { bd = dy; best = i; } });
+      return best < 0 ? [] : [[best, 0, 1]];
+    }
     const ext = new Map(), step = f.sp / 4;
     const hit = (x, y) => { let best = -1, bd = f.sp * 0.6;
       f.rows.forEach((r, i) => { const dy = Math.abs(r.y - y); if (dy < bd && x >= r.x0 - f.sp * 1.5 && x <= r.x1 + f.sp * 1.5) { bd = dy; best = i; } });
@@ -1047,23 +1115,30 @@ const App = (() => {
       const e = ext.get(best); if (e) { e[0] = Math.min(e[0], t); e[1] = Math.max(e[1], t); } else ext.set(best, [t, t]); };
     for (let k = 0; k + 1 < pts.length; k++) { const a = pts[k], b = pts[k+1], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / step));
       for (let j = 0; j <= n; j++) hit(a.x + (b.x - a.x) * j / n, a.y + (b.y - a.y) * j / n); }
-    const out = [];
-    ext.forEach(([a, b], i) => { if (b - a < 0.12) out.push([i, 0, 1]); else out.push([i, a < 0.04 ? 0 : +a.toFixed(3), b > 0.96 ? 1 : +b.toFixed(3)]); });
+    const out = [], quer = ext.size > 1;
+    ext.forEach(([a, b], i) => { if (quer || b - a < 0.12) out.push([i, 0, 1]); else out.push([i, a < 0.04 ? 0 : +a.toFixed(3), b > 0.96 ? 1 : +b.toFixed(3)]); });
     return out;
   }
   function wbUndo(){ wbUI.marks.pop(); wbDraw(); }
-  function wbAll(){ const f = frame(wbById(wbUI.id)); if (f) { wbUI.marks.push(f.rows.map((r, i) => [i, 0, 1])); wbDraw(); } }
+  function wbAll(){ const f = frame(wbById(wbUI.id)); if (f) { wbUI.marks.push({ segs: f.rows.map((r, i) => [i, 0, 1]), erase: false }); wbDraw(); } }
+  function wbView(v){ wbUI.list = v === 'list'; S.ui.wbList = wbUI.list; save(); const h = $('#wbHelp'); if (h) h.innerHTML = wbUI.list ? '<b>Tippen</b> = ganze Reihe an/aus · <b>waagerecht ziehen</b> = nur ein Stück · hoch/runter = blättern.' : '<b>Quer</b> über die Reihen wischen = ganze Reihen · <b>längs</b> einer Reihe = nur ein Stück · <b>Tippen</b> = eine Reihe.'; wbDraw(); }
+  function wbEraseToggle(){ wbUI.erase = !wbUI.erase; wbDraw(); }
   function wbSave(){
-    const w = wbById(wbUI.id), f = frame(w);
-    if (!wbUI.marks.length) return formError('Erst über die bearbeiteten Reihen wischen.');
+    const w = wbById(wbUI.id), f = frame(w), segs = netSegs();
+    if (!segs.length) return formError('Erst die bearbeiteten Reihen markieren.');
     const fd = Object.fromEntries(new FormData($('#frm')).entries());
-    const map = segsToRows(wbUI.marks.flat()), segs = [];
-    map.forEach((ivs, i) => ivs.forEach(iv => segs.push([i, +iv[0].toFixed(3), +iv[1].toFixed(3)])));
-    const id = uid();
+    const map = segsToRows(segs), id = uid();
     queueOp({ id, arbeiten: [{ Arbeit_ID: id, Datum: fd.Datum || today(), Weinberg_ID: w.Weinberg_ID, Weinberg: w.Name, Arbeit: wbUI.arbeit,
       Anteil_Prozent: +pctOf(f, map).toFixed(1), Reihen: JSON.stringify(segs), Stunden: num(fd.Stunden), Person: S.name || '', Notiz: fd.Notiz || '', Erfasst_am: new Date().toISOString() }] },
       `${wbUI.arbeit}: ${map.size} Reihen gespeichert`);
-    wbUI.marks = []; openWeinberg(w.Weinberg_ID);
+    wbUI.marks = []; wbUI.erase = false; openWeinberg(w.Weinberg_ID);
+  }
+  /* Gespeicherte Arbeit löschen (zweimal tippen) */
+  function wbDelArbeit(id, btn){
+    if (!btn.dataset.sure) { btn.dataset.sure = 1; btn.textContent = 'Wirklich löschen?'; btn.classList.add('danger'); setTimeout(() => { if (btn.isConnected) { delete btn.dataset.sure; btn.textContent = '🗑'; btn.classList.remove('danger'); } }, 4000); return; }
+    const a = S.snap.arbeiten.find(x => x.Arbeit_ID === id); if (!a) return;
+    queueOp({ del_arbeit: id }, `${a.Arbeit} vom ${fmtDate(a.Datum)} gelöscht`);
+    openWeinberg(a.Weinberg_ID);
   }
 
   /* ---------- Weinberg anlegen / bearbeiten ---------- */
@@ -1468,7 +1543,7 @@ const App = (() => {
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 
-  return { init, go, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
+  return { init, go, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
 })();
 App.init();
 </script>
