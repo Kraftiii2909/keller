@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keller</title>
+<meta name="theme-color" content="#2B1B17">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Keller">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#F5EFE6; --card:#FFFDF9; --ink:#2B1B17; --muted:#7A6A61; --line:#E6DCCF;
+  --accent:#6E1F2F; --accent-2:#8E2A3E; --gold:#B88A44; --ok:#3E7B4F; --warn:#B4652A;
+  --weiss:#E3C565; --rot:#7A1D32; --rose:#E28C9F; --leer:#D9D0C5;
+  --radius:16px; --shadow:0 1px 2px rgba(43,27,23,.06),0 4px 14px rgba(43,27,23,.06);
+  --serif: "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans: -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --safe-b: env(safe-area-inset-bottom,0px); --safe-t: env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px}
+body{min-height:100vh;padding-bottom:calc(84px + var(--safe-b))}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+h1,h2,h3{font-family:var(--serif);font-weight:600;letter-spacing:.1px;margin:0}
+
+/* Kopfzeile */
+header.top{position:sticky;top:0;z-index:20;background:var(--ink);color:#F5EFE6;
+  padding:calc(12px + var(--safe-t)) 16px 12px;display:flex;align-items:center;gap:10px}
+header.top h1{font-size:22px;flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:6px 10px;border-radius:999px;
+  background:rgba(255,255,255,.1);color:#F5EFE6;white-space:nowrap}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.pill.wait .dot{background:#F0B35A}.pill.off .dot{background:#9A8F87}.pill.err .dot{background:#E06A5A}
+.icon-btn{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.08)}
+.icon-btn svg{width:20px;height:20px;stroke:#F5EFE6}
+
+main{padding:14px 14px 0;max-width:760px;margin:0 auto}
+.section-title{display:flex;align-items:baseline;justify-content:space-between;margin:6px 2px 10px}
+.section-title h2{font-size:20px}
+.section-title small{color:var(--muted)}
+
+/* Fass-Kacheln */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.fass{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 12px 12px;
+  display:flex;gap:10px;align-items:center;text-align:left;min-height:112px;border:1px solid transparent}
+.fass:active{transform:scale(.98)}
+.fass svg{flex:0 0 52px;height:78px}
+.fass .t{min-width:0}
+.fass .nr{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.4px}
+.fass .wein{font-family:var(--serif);font-size:16px;line-height:1.2;margin:2px 0 4px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.fass .menge{font-size:13px;color:var(--muted)}
+.fass.leer .wein{color:#A99C92;font-style:italic}
+.badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;background:#F1E4D6;color:#6B4E3A;margin-left:4px}
+
+/* Listen */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.row{display:flex;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);text-align:left;width:100%}
+.row:last-child{border-bottom:0}
+.swatch{width:12px;height:36px;border-radius:6px;flex:0 0 12px}
+.row .main{flex:1;min-width:0}
+.row .title{font-weight:600}
+.row .sub{font-size:13px;color:var(--muted);margin-top:2px}
+.row .right{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.row .right small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+
+.log-day{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin:16px 4px 6px}
+.log .chip{font-size:12px;font-weight:600;padding:3px 8px;border-radius:8px;background:#F1E4D6;color:#5A3B2B;white-space:nowrap}
+.log .chip.beh{background:#EADFF0;color:#4E2F63}.log .chip.ein{background:#DDEEDF;color:#2F5A3A}
+.log .chip.aus{background:#F6DDD8;color:#7A2E22}.log .chip.ump{background:#DCE8F2;color:#244B6B}
+.pending{font-size:11px;color:var(--warn);font-weight:600}
+
+/* Untere Leiste */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(255,253,249,.96);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);
+  display:flex;justify-content:space-around;align-items:center;padding:8px 8px calc(8px + var(--safe-b))}
+nav.tabs button{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--muted);min-width:64px}
+nav.tabs button svg{width:24px;height:24px;stroke:currentColor}
+nav.tabs button.on{color:var(--accent)}
+nav.tabs .fab{width:56px;height:56px;border-radius:18px;background:var(--accent);color:#fff;margin-top:-26px;
+  box-shadow:0 6px 16px rgba(110,31,47,.35);display:grid;place-items:center;min-width:0}
+nav.tabs .fab svg{stroke:#fff;width:28px;height:28px}
+
+/* Bottom-Sheet */
+.backdrop{position:fixed;inset:0;background:rgba(30,18,15,.45);z-index:40;opacity:0;pointer-events:none;transition:opacity .2s}
+.backdrop.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--bg);border-radius:20px 20px 0 0;
+  max-height:92vh;overflow:auto;transform:translateY(105%);transition:transform .25s ease;
+  padding:8px 16px calc(20px + var(--safe-b));max-width:760px;margin:0 auto;-webkit-overflow-scrolling:touch}
+.sheet.on{transform:none}
+.grab{width:40px;height:5px;border-radius:3px;background:#CFC3B5;margin:4px auto 10px}
+.sheet h2{font-size:22px;margin-bottom:2px}
+.sheet .lead{color:var(--muted);margin:0 0 14px;font-size:14px}
+.hero{display:flex;gap:16px;align-items:center;background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);margin-bottom:14px}
+.hero svg{width:70px;height:104px;flex:0 0 70px}
+.hero .big{font-family:var(--serif);font-size:22px;line-height:1.15}
+.hero .meta{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.5}
+
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.act{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:12px 6px;display:flex;flex-direction:column;
+  align-items:center;gap:6px;font-size:13px;font-weight:600;text-align:center;min-height:76px;justify-content:center}
+.act .ico{font-size:22px;line-height:1}
+.act:active{background:#F3E9DE}
+
+/* Formulare */
+form .f{display:block;margin-bottom:12px}
+form label{display:block;font-size:13px;font-weight:600;color:#5E4B42;margin:0 2px 5px}
+form .hint{font-weight:400;color:var(--muted)}
+input,select,textarea{width:100%;font:inherit;font-size:17px;padding:12px 12px;border-radius:12px;border:1px solid var(--line);
+  background:#fff;color:var(--ink);appearance:none;-webkit-appearance:none}
+select{background-image:linear-gradient(45deg,transparent 50%,#8A7A70 50%),linear-gradient(135deg,#8A7A70 50%,transparent 50%);
+  background-position:calc(100% - 18px) 52%,calc(100% - 13px) 52%;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px}
+textarea{min-height:70px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid rgba(110,31,47,.35);border-color:var(--accent)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{padding:9px 12px;border-radius:10px;background:#fff;border:1px solid var(--line);font-size:14px}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn{display:block;width:100%;padding:15px;border-radius:14px;background:var(--accent);color:#fff;font-weight:700;font-size:17px;margin-top:6px}
+.btn.sec{background:#fff;color:var(--ink);border:1px solid var(--line);font-weight:600}
+.note{font-size:13px;color:var(--muted);background:#F1E7DB;border-radius:12px;padding:10px 12px;margin:4px 0 12px;line-height:1.45}
+.warn{background:#F8E1D6;color:#7A3A1E}
+.empty{text-align:center;color:var(--muted);padding:30px 10px}
+.toast{position:fixed;left:50%;bottom:calc(96px + var(--safe-b));transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
+  padding:10px 16px;border-radius:12px;font-size:14px;z-index:60;opacity:0;transition:.25s;pointer-events:none;max-width:90vw}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.demo-banner{background:#3A2620;color:#F2E6D8;font-size:13px;padding:8px 14px;text-align:center}
+.demo-banner button{text-decoration:underline;color:#F2C98A}
+
+/* Modus-Umschalter */
+.mode{display:flex;background:rgba(255,255,255,.1);border-radius:12px;padding:3px;flex:1;max-width:260px}
+.mode button{flex:1;color:#D8CABB;font-family:var(--serif);font-size:17px;padding:6px 8px;border-radius:9px}
+.mode button.on{background:#F5EFE6;color:var(--ink)}
+/* Weinberge */
+.wb-card{display:flex;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.wb-card:last-child{border-bottom:0}
+.wb-mini{flex:0 0 74px;height:60px;border-radius:10px;background:#EFE6D6;overflow:hidden}
+.wb-mini svg{width:100%;height:100%}
+.bar{height:7px;border-radius:4px;background:#EDE3D6;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;border-radius:4px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 8px;margin:0 -2px 6px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none;padding:8px 12px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px}
+.chips button i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.chips button.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.wb-box{background:#F3EBDF;border-radius:var(--radius);padding:8px;touch-action:none;user-select:none;-webkit-user-select:none;position:relative}
+.wb-box svg{width:100%;display:block;max-height:58vh}
+.prog{display:flex;justify-content:space-between;align-items:baseline;margin:10px 2px 4px;font-size:15px}
+.prog b{font-family:var(--serif);font-size:22px}
+.btnrow{display:flex;gap:8px}.btnrow .btn{margin-top:8px}
+.btn.small{padding:11px;font-size:15px}
+#map{height:56vh;border-radius:var(--radius);overflow:hidden;background:#DDD3C4}
+.mapctl{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.mapctl button{padding:10px 12px;border-radius:10px;background:#fff;border:1px solid var(--line);font-size:14px;font-weight:600}
+.calc{width:100%;border-collapse:collapse;font-size:15px}
+.calc th,.calc td{padding:7px 4px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+.calc th:first-child,.calc td:first-child{text-align:left}
+.calc th{font-size:12px;color:var(--muted);font-weight:600}
+.checks{display:grid;gap:6px}
+.checks label{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0;font-size:15px;font-weight:600;color:var(--ink)}
+.checks input{width:20px;height:20px;accent-color:var(--accent);appearance:auto;-webkit-appearance:auto;padding:0;flex:none}
+.checks small{margin-left:auto;color:var(--muted);font-weight:400}
+.mline{display:grid;grid-template-columns:1fr 110px;gap:8px;margin-bottom:8px}
+.running{background:#3A6EA5;color:#fff;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.running button{margin-left:auto;background:#fff;color:#1F4B78;font-weight:700;padding:9px 12px;border-radius:10px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="mode" id="modeSw"><button data-mode="keller" onclick="App.setMode('keller')">Keller</button><button data-mode="weinberg" onclick="App.setMode('weinberg')">Weinberg</button></div><span style="flex:1"></span>
+  <button class="pill" id="syncPill" onclick="App.syncNow(true)"><span class="dot"></span><span id="syncText">…</span></button>
+  <button class="icon-btn" aria-label="Einstellungen" onclick="App.openSettings()">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+  </button>
+</header>
+<div id="demoBanner" class="demo-banner" hidden>Demo mit Beispieldaten · <button onclick="App.openSettings()">mit Google-Tabelle verbinden</button></div>
+<main id="view"></main>
+
+<nav class="tabs" id="nav"></nav>
+
+<div class="backdrop" id="backdrop" onclick="App.closeSheet()"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="grab"></div><div id="sheetBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   Keller – Web-App fürs Kellerbuch
+   Daten: Google-Tabelle (über Apps-Script), offline zwischengespeichert
+   ============================================================ */
+const App = (() => {
+  const KEY = 'kellerapp.v1';
+  const DEMO = {
+    behaelter: [
+      ['F01','Fass 1','GFK/Kunststoff',2000,'26-05',1950,'2026-09-10'],
+      ['F02','Fass 2','GFK/Kunststoff',2000,'26-06',1800,'2026-09-10'],
+      ['F03','Fass 3','GFK/Kunststoff',2700,'26-01',2600,'2026-09-14'],
+      ['F04','Fass 4','GFK/Kunststoff',1900,'',null,''],
+      ['F05','Fass 5','GFK/Kunststoff',1100,'26-03',1050,'2026-09-20'],
+      ['F06','Fass 6','GFK/Kunststoff',2700,'',null,''],
+      ['F07','Fass 7','GFK/Kunststoff',300,'26-04',280,'2026-09-12'],
+      ['F08','Fass 8','Edelstahl',2500,'',null,''],
+      ['F09','Fass 9','Edelstahl',2500,'',null,''],
+      ['F10','Fass 10','Edelstahl',2500,'',null,''],
+      ['F11','Fass 11','Edelstahl',2500,'',null,''],
+      ['F12','Fass 12','GFK/Kunststoff',1500,'',null,'']
+    ].map(r => ({Behaelter_Nr:r[0],Bezeichnung:r[1],Material:r[2],Fassungsvermoegen_L:r[3],Aufstellungsort:'Keller',Aktuelle_Weinnummer:r[4],Fuellstand_L:r[5],Befuellt_am:r[6]})),
+    partien: [
+      {Weinnummer:'26-01',Bezeichnung:'Sauvignon Blanc 2026',Erzeugniskategorie:'Wein',Jahrgang:2026,Rebsorte:'Sauvignon Blanc',Herkunft:'Rheinhessen',Farbe:'Weiß',Status:'aktiv'},
+      {Weinnummer:'26-03',Bezeichnung:'Riesling 2026',Erzeugniskategorie:'Wein',Jahrgang:2026,Rebsorte:'Riesling',Farbe:'Weiß',Status:'aktiv'},
+      {Weinnummer:'26-04',Bezeichnung:'Spätburgunder 2026 Süßreserve',Erzeugniskategorie:'Traubenmost (Süßreserve)',Jahrgang:2026,Rebsorte:'Spätburgunder',Farbe:'Rot',Status:'aktiv'},
+      {Weinnummer:'26-05',Bezeichnung:'Dornfelder Rosé hell',Erzeugniskategorie:'Jungwein',Jahrgang:2026,Rebsorte:'Dornfelder',Herkunft:'Rheinhessen',Lesedatum:'2026-09-10',Mostgewicht_Oe:85,Farbe:'Rosé',Status:'aktiv'},
+      {Weinnummer:'26-06',Bezeichnung:'Dornfelder Rosé dunkel',Erzeugniskategorie:'Jungwein',Jahrgang:2026,Rebsorte:'Dornfelder',Herkunft:'Rheinhessen',Lesedatum:'2026-09-10',Mostgewicht_Oe:85,Farbe:'Rosé',Status:'aktiv'}
+    ],
+    stoffe: [
+      {Stoff:'Kaliumdisulfit',Kategorie:'Schwefelung',Einheit:'g'},{Stoff:'Saccharose',Kategorie:'Anreicherung/Süßung',Einheit:'kg'},
+      {Stoff:'Rektifiziertes Traubenmostkonzentrat (RTK)',Kategorie:'Anreicherung/Süßung',Einheit:'L'},{Stoff:'L(+)-Weinsäure',Kategorie:'Säuerung',Einheit:'kg'},
+      {Stoff:'Kaliumhydrogencarbonat',Kategorie:'Entsäuerung',Einheit:'kg'},{Stoff:'Calciumcarbonat',Kategorie:'Entsäuerung',Einheit:'kg'},
+      {Stoff:'Ascorbinsäure',Kategorie:'Antioxidation',Einheit:'g'},{Stoff:'Bentonit',Kategorie:'Klärung/Schönung',Einheit:'g'},
+      {Stoff:'Reinzuchthefe',Kategorie:'Gärung',Einheit:'g'},{Stoff:'Hefenährsalz',Kategorie:'Gärung',Einheit:'g'}
+    ],
+    register: [
+      {Eintrag_ID:'d1',Datum:'2026-09-10',Vorgangsart:'Eingang Lesegut',Weinnummer:'26-05',Behaelter_nach:'F01',Zugang_L:1950,Analysewerte:'85 °Oe'},
+      {Eintrag_ID:'d2',Datum:'2026-09-10',Vorgangsart:'Eingang Lesegut',Weinnummer:'26-06',Behaelter_nach:'F02',Zugang_L:1800,Analysewerte:'85 °Oe'},
+      {Eintrag_ID:'d3',Datum:'2026-09-11',Vorgangsart:'Gärbeginn/Hefezugabe',Weinnummer:'26-05',Behaelter_nach:'F01',Stoff:'Reinzuchthefe',Stoffmenge:400},
+      {Eintrag_ID:'d4',Datum:'2026-11-20',Vorgangsart:'Schwefelung',Weinnummer:'26-05',Behaelter_nach:'F01',Stoff:'Kaliumdisulfit',Stoffmenge:100,Analysewerte:'freie SO2 vorher 12 mg/l'},
+      {Eintrag_ID:'d5',Datum:'2026-11-22',Vorgangsart:'Analyse',Weinnummer:'26-06',Behaelter_nach:'F02',Analysewerte:'Alkohol 11,8 % vol; Restzucker 3,2 g/l; Gesamtsäure 6,1 g/l'}
+    ]
+  };
+
+  const VORGANG = {
+    beh: ['Anreicherung','Süßung','Säuerung','Entsäuerung','Klärung/Schönung','Filtration','Gärbeginn/Hefezugabe','Sonstige Behandlung'],
+    ein: ['Eingang Lesegut','Eingang Zukauf','Mehrmenge'],
+    aus: ['Ausgang Verkauf Fasswein','Eigenverbrauch','Schwund']
+  };
+  const FARBE = { 'Weiß':'var(--weiss)', 'Rot':'var(--rot)', 'Rosé':'var(--rose)' };
+  const FARBE_HEX = { 'Weiß':'#E3C565', 'Rot':'#7A1D32', 'Rosé':'#E28C9F' };
+
+  let S = load();
+  let mode = (S.ui && S.ui.mode) || 'keller';
+  let tab = mode === 'weinberg' ? 'wb' : 'faesser';
+  let syncing = false, lastError = '';
+
+  /* ---------- Speicher ---------- */
+  function load(){
+    try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.snap) return s; } catch(e){}
+    return { snap: JSON.parse(JSON.stringify(DEMO)), queue: [], settings: {}, demo: true, ui: {} };
+  }
+  function ensure(){
+    S.ui = S.ui || {};
+    ['behaelter','partien','stoffe','register','weinberge','arbeiten','mittel','ps'].forEach(k => { if (!Array.isArray(S.snap[k])) S.snap[k] = []; });
+    if (S.demo && !S.snap.weinberge.length) demoWeinberge();
+  }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){ toast('Speichern auf dem Gerät fehlgeschlagen'); } }
+
+  /* ---------- Helfer ---------- */
+  const $ = s => document.querySelector(s);
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const num = v => (v === '' || v === null || v === undefined || isNaN(+v)) ? null : +v;
+  const fmtL = v => v == null ? '–' : Math.round(v).toLocaleString('de-DE') + ' L';
+  const today = () => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+  const fmtDate = s => { if(!s) return ''; const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/); return m ? `${+m[3]}.${+m[2]}.${m[1]}` : s; };
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Date.now()+'-'+Math.random().toString(16).slice(2));
+  const fass = nr => S.snap.behaelter.find(f => f.Behaelter_Nr === nr);
+  const wein = nr => S.snap.partien.find(p => p.Weinnummer === nr);
+  const weinName = nr => (wein(nr)||{}).Bezeichnung || nr || '';
+  const stoff = n => S.snap.stoffe.find(s => s.Stoff === n);
+  function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('on'), 2600); }
+
+  function bestand(wnr){
+    return S.snap.register.filter(r => r.Weinnummer === wnr)
+      .reduce((s,r) => s + (num(r.Zugang_L)||0) - (num(r.Abgang_L)||0), 0);
+  }
+  function weinInFaessern(wnr){ return S.snap.behaelter.filter(f => f.Aktuelle_Weinnummer === wnr); }
+  function inhalt(wnr){ return weinInFaessern(wnr).reduce((s,f)=> s + (num(f.Fuellstand_L)||0), 0); }
+  function naechsteWeinnummer(){
+    const yy = String(new Date().getFullYear()).slice(2);
+    const used = S.snap.partien.map(p => String(p.Weinnummer)).filter(n => n.startsWith(yy+'-')).map(n => +n.split('-')[1]||0);
+    return yy + '-' + String((used.length ? Math.max(...used) : 0) + 1).padStart(2,'0');
+  }
+
+  /* ---------- Grafik ---------- */
+  function fassSVG(f, big){
+    const w = wein(f.Aktuelle_Weinnummer);
+    const cap = num(f.Fassungsvermoegen_L) || 0, lvl = num(f.Fuellstand_L) || 0;
+    const pct = f.Aktuelle_Weinnummer && cap ? Math.max(0, Math.min(1, lvl / cap)) : 0;
+    const col = w ? (FARBE_HEX[w.Farbe] || '#B88A44') : '#D9D0C5';
+    const holz = /holz/i.test(f.Material||''), stahl = /stahl/i.test(f.Material||'');
+    const id = 'c' + f.Behaelter_Nr.replace(/\W/g,'') + (big?'b':'');
+    const top = 10, bot = 112, h = bot - top, y = bot - pct * h;
+    const shape = holz
+      ? 'M24 10 Q8 61 24 112 L76 112 Q92 61 76 10 Z'
+      : 'M18 18 Q18 10 26 10 L74 10 Q82 10 82 18 L82 106 Q82 112 76 112 L24 112 Q18 112 18 106 Z';
+    const body = holz ? '#C9A27A' : (stahl ? '#E4E7EA' : '#F3EFE9');
+    const stroke = holz ? '#7C5A3A' : (stahl ? '#9AA3AB' : '#B9AEA2');
+    const hoops = holz ? `<path d="M15 32 Q50 36 85 32M15 90 Q50 86 85 90" stroke="${stroke}" stroke-width="3" fill="none"/>`
+                       : `<path d="M18 30H82M18 94H82" stroke="${stroke}" stroke-width="1.5" opacity=".6"/>`;
+    return `<svg viewBox="0 0 100 122" aria-hidden="true">
+      <defs><clipPath id="${id}"><path d="${shape}"/></clipPath>
+      <linearGradient id="${id}g" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".0"/><stop offset=".25" stop-color="#fff" stop-opacity=".35"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+      <path d="${shape}" fill="${body}"/>
+      <g clip-path="url(#${id})"><rect x="0" y="${y}" width="100" height="${bot - y + 2}" fill="${col}"/>
+      ${pct>0?`<path d="M0 ${y} Q25 ${y-2} 50 ${y} T100 ${y}" stroke="#fff" stroke-opacity=".35" stroke-width="2" fill="none"/>`:''}
+      <rect x="0" y="0" width="100" height="122" fill="url(#${id}g)"/></g>
+      ${hoops}<path d="${shape}" fill="none" stroke="${stroke}" stroke-width="2.5"/>
+      ${stahl?'<circle cx="50" cy="118" r="0"/>':''}
+    </svg>`;
+  }
+
+  /* ---------- Ansichten ---------- */
+  const ICON = {
+    faesser:'<path d="M7 3h10c1.5 3 1.5 15 0 18H7C5.5 18 5.5 6 7 3z"/><path d="M5.9 8h12.2M5.9 16h12.2"/>',
+    weine:'<path d="M8 3h8l-.5 6a3.5 3.5 0 0 1-7 0L8 3z"/><path d="M12 12.5V20M8.5 21h7"/>',
+    buch:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M5 17a3 3 0 0 1 3-3h11M9 8h6"/>',
+    mehr:'<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+    wb:'<path d="M3 20c3-6 6-9 9-9s6 3 9 9"/><path d="M6 20c2-4 4-6 6-6s4 2 6 6M12 11V4m0 0c2 0 3 1 3 3"/>',
+    wbbuch:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M9 9l2 2 4-4"/>',
+    ps:'<path d="M14 4h5v4"/><path d="M19 4l-7 7"/><path d="M9 9l6 6-5 5a2.8 2.8 0 0 1-4-4z"/><path d="M4 21l2-2"/>'
+  };
+  const NAV = { keller: [['faesser','Fässer'],['weine','Weine'],null,['buch','Kellerbuch'],['mehr','Mehr']],
+                weinberg: [['wb','Weinberge'],['wbbuch','Tagebuch'],null,['ps','Spritzen'],['mehr','Mehr']] };
+  function renderNav(){
+    $('#nav').innerHTML = NAV[mode].map(n => n ? `<button data-tab="${n[0]}" class="${n[0]===tab?'on':''}" onclick="App.go('${n[0]}')"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[n[0]]}</svg>${n[1]}</button>`
+      : `<button class="fab" aria-label="Neuer Eintrag" onclick="App.fab()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>`).join('');
+    document.querySelectorAll('#modeSw button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
+  }
+  function render(){
+    renderNav();
+    $('#demoBanner').hidden = !S.demo;
+    const v = $('#view');
+    const V = { faesser: viewFaesser, weine: viewWeine, buch: viewBuch, mehr: viewMehr, wb: viewWB, wbbuch: viewWBBuch, ps: viewPS };
+    v.innerHTML = (V[tab] || viewFaesser)();
+    renderSync();
+  }
+  function setMode(m){ mode = m; S.ui.mode = m; save(); tab = m === 'weinberg' ? 'wb' : 'faesser'; closeSheet(); render(); window.scrollTo(0,0); }
+  function fab(){ return mode === 'weinberg' ? wbNewEntry() : newEntry(); }
+
+  function viewFaesser(){
+    const list = [...S.snap.behaelter].sort((a,b) => a.Behaelter_Nr.localeCompare(b.Behaelter_Nr, 'de', {numeric:true}));
+    const voll = list.filter(f => f.Aktuelle_Weinnummer), leer = list.filter(f => !f.Aktuelle_Weinnummer);
+    const total = voll.reduce((s,f)=> s + (num(f.Fuellstand_L)||0), 0);
+    const card = f => {
+      const w = wein(f.Aktuelle_Weinnummer);
+      return `<button class="fass ${w?'':'leer'}" onclick="App.openFass('${esc(f.Behaelter_Nr)}')">
+        ${fassSVG(f)}<div class="t"><div class="nr">${esc(f.Behaelter_Nr)}${f.Bezeichnung && f.Bezeichnung !== 'Fass '+(+f.Behaelter_Nr.replace(/\D/g,''))?' · '+esc(f.Bezeichnung):''}</div>
+        <div class="wein">${w ? esc(w.Bezeichnung) : 'leer'}</div>
+        <div class="menge">${w ? fmtL(num(f.Fuellstand_L)) + ' / ' : ''}${fmtL(num(f.Fassungsvermoegen_L))}</div></div></button>`;
+    };
+    return `<div class="section-title"><h2>Im Keller</h2><small>${voll.length} belegt · ${leer.length} leer · ${fmtL(total)}</small></div>
+      <div class="grid">${list.map(card).join('') || '<div class="empty">Noch keine Fässer angelegt.</div>'}</div>`;
+  }
+
+  function viewWeine(){
+    const list = S.snap.partien.filter(p => (p.Status||'aktiv') === 'aktiv');
+    const rows = list.map(p => {
+      const fs = weinInFaessern(p.Weinnummer);
+      return `<button class="row" onclick="App.openWein('${esc(p.Weinnummer)}')">
+        <span class="swatch" style="background:${FARBE[p.Farbe]||'var(--leer)'}"></span>
+        <div class="main"><div class="title">${esc(p.Bezeichnung)}</div>
+        <div class="sub">${esc(p.Weinnummer)} · ${esc(p.Erzeugniskategorie||'')}${fs.length?' · '+fs.map(f=>f.Behaelter_Nr).join(', '):''}</div></div>
+        <div class="right">${fmtL(inhalt(p.Weinnummer))}<small>im Fass</small></div></button>`;
+    }).join('');
+    return `<div class="section-title"><h2>Weine</h2><small>${list.length} aktiv</small></div>
+      <div class="card">${rows || '<div class="empty">Noch keine Weine angelegt.</div>'}</div>
+      <button class="btn sec" style="margin-top:14px" onclick="App.form('befuellen')">+ Neuen Wein ins Fass legen</button>`;
+  }
+
+  function chipClass(v){
+    if (VORGANG.beh.includes(v) || v === 'Schwefelung') return 'beh';
+    if (VORGANG.ein.includes(v)) return 'ein';
+    if (VORGANG.aus.includes(v) || v === 'Abfüllung') return 'aus';
+    if (/Umpumpen/.test(v)) return 'ump';
+    return '';
+  }
+  function logRows(entries){
+    if (!entries.length) return '<div class="empty">Noch keine Einträge.</div>';
+    const sorted = [...entries].sort((a,b) => String(b.Datum).localeCompare(String(a.Datum)) || String(b.Erfasst_am||'').localeCompare(String(a.Erfasst_am||'')));
+    let html = '', day = '';
+    sorted.forEach(r => {
+      const d = fmtDate(r.Datum);
+      if (d !== day) { if (day) html += '</div>'; html += `<div class="log-day">${d}</div><div class="card log">`; day = d; }
+      const bits = [];
+      if (r.Behaelter_von && r.Behaelter_nach) bits.push(`${esc(r.Behaelter_von)} → ${esc(r.Behaelter_nach)}`);
+      else if (r.Behaelter_nach || r.Behaelter_von) bits.push(esc(r.Behaelter_nach || r.Behaelter_von));
+      if (r.Stoff) bits.push(`${esc(r.Stoff)}${r.Stoffmenge?` ${esc(r.Stoffmenge)} ${esc((stoff(r.Stoff)||{}).Einheit||'')}`:''}`);
+      if (r.Flaschen_Anzahl) bits.push(`${r.Flaschen_Anzahl} × ${String(r.Nennfuellmenge_L).replace('.',',')} L`);
+      if (r.Analysewerte) bits.push(esc(r.Analysewerte));
+      if (r.Partner_Name_Anschrift) bits.push(esc(r.Partner_Name_Anschrift));
+      if (r.Notiz) bits.push(esc(r.Notiz));
+      if (r.Erfasst_von && r.Erfasst_von !== 'Web-App' && !/@/.test(r.Erfasst_von)) bits.push('von ' + esc(r.Erfasst_von));
+      const amt = num(r.Zugang_L) ? '+' + fmtL(num(r.Zugang_L)) : num(r.Abgang_L) ? '−' + fmtL(num(r.Abgang_L)) : '';
+      html += `<div class="row"><div class="main"><span class="chip ${chipClass(r.Vorgangsart)}">${esc(r.Vorgangsart)}</span>
+        <div class="title" style="margin-top:6px">${esc(weinName(r.Weinnummer))}</div>
+        <div class="sub">${bits.join(' · ')}</div>${r._pending?'<div class="pending">⟳ wartet auf Übertragung</div>':''}</div>
+        <div class="right">${amt}</div></div>`;
+    });
+    return html + '</div>';
+  }
+  function viewBuch(){
+    return `<div class="section-title"><h2>Kellerbuch</h2><small>${S.snap.register.length} Einträge</small></div>` + logRows(S.snap.register);
+  }
+
+  function viewMehr(){
+    const offen = S.queue.length;
+    return `<div class="section-title"><h2>Mehr</h2></div>
+      <div class="card">
+        <button class="row" onclick="App.form('stoffkauf')"><div class="main"><div class="title">Zusatzstoff eingekauft</div><div class="sub">Zucker, Säure, Schwefel … mit Lieferant (Stoffkonto)</div></div></button>
+        <button class="row" onclick="App.openSettings()"><div class="main"><div class="title">Einstellungen & Verbindung</div><div class="sub">${S.settings.url ? 'Verbunden mit Google-Tabelle' : 'Noch nicht verbunden'}</div></div></button>
+        <button class="row" onclick="App.exportJSON()"><div class="main"><div class="title">Sicherung herunterladen</div><div class="sub">Alle Daten auf diesem Gerät als Datei</div></div></button>
+        <button class="row" onclick="App.syncNow(true)"><div class="main"><div class="title">Jetzt synchronisieren</div><div class="sub">${offen ? offen + ' Einträge warten' : 'Alles übertragen'}${S.snap.stand ? ' · Stand ' + new Date(S.snap.stand).toLocaleString('de-DE',{dateStyle:'short',timeStyle:'short'}) : ''}</div></div></button>
+      </div>
+      <p class="note" style="margin-top:16px">Tipp: In Safari auf <b>Teilen → Zum Home-Bildschirm</b> tippen, dann startet die App wie eine normale App – auch ohne Netz im Keller.</p>`;
+  }
+
+  /* ---------- Fass & Wein ---------- */
+  function openFass(nr){
+    const f = fass(nr); if (!f) return toast('Fass ' + nr + ' nicht gefunden');
+    const w = wein(f.Aktuelle_Weinnummer);
+    const hist = S.snap.register.filter(r => r.Behaelter_nach === nr || r.Behaelter_von === nr);
+    const A = (k, ico, t) => `<button class="act" onclick="App.form('${k}','${esc(nr)}')"><span class="ico">${ico}</span>${t}</button>`;
+    const acts = w
+      ? A('schwefeln','🧪','Schwefeln') + A('umpumpen','🔁','Umpumpen') + A('behandlung','⚗️','Zusatz / Behandlung')
+        + A('analyse','📋','Analyse') + A('abgang','📤','Abgang / Verkauf') + A('abfuellung','🍾','Abfüllen')
+        + A('zugang','📥','Zugang') + A('korrektur','✏️','Füllstand / Inhalt')
+      : A('befuellen','🍇','Wein einlagern') + A('korrektur','✏️','Füllstand / Inhalt');
+    openSheet(`<div class="hero">${fassSVG(f,true)}<div><div class="nr" style="font-size:13px;color:var(--muted);font-weight:700">${esc(f.Behaelter_Nr)} · ${esc(f.Bezeichnung||'')}</div>
+      <div class="big">${w ? esc(w.Bezeichnung) : '<i style="color:#A99C92">leer</i>'}</div>
+      <div class="meta">${w ? `<b>${fmtL(num(f.Fuellstand_L))}</b> von ${fmtL(num(f.Fassungsvermoegen_L))}${f.Befuellt_am?'<br>im Fass seit '+fmtDate(f.Befuellt_am):''}` : fmtL(num(f.Fassungsvermoegen_L)) + ' · ' + esc(f.Material||'')}</div></div></div>
+      <div class="actions">${acts}</div>
+      ${w ? `<button class="btn sec" style="margin:-4px 0 6px" onclick="App.openWein('${esc(w.Weinnummer)}')">Alles zu diesem Wein ansehen</button>` : ''}
+      <div class="log-day" style="margin-top:14px">Verlauf dieses Fasses</div>${logRows(hist).replace(/<div class="log-day">[^<]*<\/div>/g,'')}`);
+  }
+
+  function openWein(wnr){
+    const p = wein(wnr); if (!p) return;
+    const fs = weinInFaessern(wnr);
+    const hist = S.snap.register.filter(r => r.Weinnummer === wnr);
+    const kv = [['Weinnummer',p.Weinnummer],['Kategorie',p.Erzeugniskategorie],['Rebsorte',p.Rebsorte],['Herkunft',p.Herkunft],
+      ['Lesedatum',fmtDate(p.Lesedatum)],['Mostgewicht',p.Mostgewicht_Oe?p.Mostgewicht_Oe+' °Oe':''],['Nat. Alkohol',p.Nat_Alkohol_vol?p.Nat_Alkohol_vol+' % vol':''],
+      ['Im Fass',fs.length?fs.map(f=>f.Behaelter_Nr+' ('+fmtL(num(f.Fuellstand_L))+')').join(', '):'–'],['Bestand laut Kellerbuch',fmtL(bestand(wnr))]]
+      .filter(x => x[1]).map(x => `<dt>${x[0]}</dt><dd>${esc(x[1])}</dd>`).join('');
+    openSheet(`<div style="display:flex;gap:10px;align-items:center;margin-bottom:4px"><span class="swatch" style="height:28px;background:${FARBE[p.Farbe]||'var(--leer)'}"></span><h2>${esc(p.Bezeichnung)}</h2></div>
+      <div class="card" style="padding:14px;margin:10px 0 6px"><dl class="kv">${kv}</dl></div>
+      ${Math.abs(bestand(wnr) - inhalt(wnr)) > 0.5 && hist.length ? `<p class="note">Kellerbuch (${fmtL(bestand(wnr))}) und Füllstände (${fmtL(inhalt(wnr))}) weichen ab – fehlt ein Eintrag (z. B. Zugang oder Schwund)?</p>`:''}
+      ${fs.length ? `<div class="actions" style="grid-template-columns:repeat(2,1fr)">${fs.map(f=>`<button class="act" onclick="App.openFass('${f.Behaelter_Nr}')"><span class="ico">🛢️</span>${f.Behaelter_Nr}</button>`).join('')}</div>`:''}
+      <div class="log-day">Verlauf</div>${logRows(hist).replace(/<div class="log-day">[^<]*<\/div>/g,'')}`);
+  }
+
+  /* ---------- Formulare ---------- */
+  const optFaesser = (sel, filter) => S.snap.behaelter.filter(filter || (()=>true))
+    .sort((a,b)=>a.Behaelter_Nr.localeCompare(b.Behaelter_Nr,'de',{numeric:true}))
+    .map(f => `<option value="${esc(f.Behaelter_Nr)}" ${f.Behaelter_Nr===sel?'selected':''}>${esc(f.Behaelter_Nr)} – ${f.Aktuelle_Weinnummer ? esc(weinName(f.Aktuelle_Weinnummer))+' ('+fmtL(num(f.Fuellstand_L))+')' : 'leer ('+fmtL(num(f.Fassungsvermoegen_L))+')'}</option>`).join('');
+  // Zielfässer fürs Umpumpen: leer oder gleicher Wein, das kleinste passende leere Fass zuerst
+  function zielOptionen(von){
+    if (!von || !von.Behaelter_Nr) return '';
+    const menge = num(von.Fuellstand_L) || 0;
+    const ok = S.snap.behaelter.filter(x => x.Behaelter_Nr !== von.Behaelter_Nr && (!x.Aktuelle_Weinnummer || x.Aktuelle_Weinnummer === von.Aktuelle_Weinnummer));
+    const passt = x => (num(x.Fassungsvermoegen_L) || Infinity) - (x.Aktuelle_Weinnummer ? (num(x.Fuellstand_L)||0) : 0) >= menge;
+    ok.sort((a,b) => (passt(b) - passt(a)) || ((num(a.Fassungsvermoegen_L)||0) - (num(b.Fassungsvermoegen_L)||0)) || a.Behaelter_Nr.localeCompare(b.Behaelter_Nr,'de',{numeric:true}));
+    if (!ok.length) return '<option value="">– kein freies Fass –</option>';
+    return ok.map(x => `<option value="${esc(x.Behaelter_Nr)}">${esc(x.Behaelter_Nr)} – ${x.Aktuelle_Weinnummer ? 'gleicher Wein ('+fmtL(num(x.Fuellstand_L))+')' : 'leer, fasst '+fmtL(num(x.Fassungsvermoegen_L))}${passt(x)?'':' – zu klein'}</option>`).join('');
+  }
+  const optStoffe = (sel, kat) => S.snap.stoffe.filter(s => !kat || kat.test(s.Kategorie||'') || s.Stoff===sel)
+    .map(s => `<option value="${esc(s.Stoff)}" ${s.Stoff===sel?'selected':''}>${esc(s.Stoff)} (${esc(s.Einheit||'')})</option>`).join('');
+  const opts = (arr, sel) => arr.map(v => `<option ${v===sel?'selected':''}>${esc(v)}</option>`).join('');
+  const field = (label, html, hint) => `<div class="f"><label>${label}${hint?` <span class="hint">${hint}</span>`:''}</label>${html}</div>`;
+  const inNum = (name, val, ph, step) => `<input name="${name}" type="number" inputmode="decimal" step="${step||'any'}" ${val!=null?`value="${val}"`:''} placeholder="${ph||''}">`;
+  const inTxt = (name, val, ph) => `<input name="${name}" value="${esc(val||'')}" placeholder="${esc(ph||'')}">`;
+  const inDate = (val) => field('Datum', `<input name="Datum" type="date" value="${val||today()}">`);
+  const fassPick = (nr, filter) => field('Fass', `<select name="fass">${optFaesser(nr, filter || (f=>f.Aktuelle_Weinnummer))}</select>`);
+
+  function newEntry(){
+    const A = (k, ico, t) => `<button class="act" onclick="App.form('${k}')"><span class="ico">${ico}</span>${t}</button>`;
+    openSheet(`<h2>Neuer Eintrag</h2><p class="lead">Was hast du gemacht?</p><div class="actions">
+      ${A('schwefeln','🧪','Schwefeln')}${A('umpumpen','🔁','Umpumpen')}${A('behandlung','⚗️','Zusatz / Behandlung')}
+      ${A('analyse','📋','Analyse')}${A('abgang','📤','Abgang / Verkauf')}${A('abfuellung','🍾','Abfüllen')}
+      ${A('zugang','📥','Zugang')}${A('befuellen','🍇','Wein einlagern')}${A('korrektur','✏️','Füllstand / Inhalt')}</div>`);
+  }
+
+  const FORMS = {
+    schwefeln: nr => ({ title:'Schwefeln', lead:'Kaliumdisulfit oder anderes Schwefelmittel zugeben.', html:
+      fassPick(nr) + inDate() + `<div class="two">${field('Mittel', `<select name="Stoff">${optStoffe('Kaliumdisulfit')}</select>`)}${field('Menge', inNum('Stoffmenge', null, 'z. B. 50'))}</div>`
+      + `<div class="two">${field('Freie SO₂ vorher', inNum('so2vor', null, 'mg/l'), '(optional)')}${field('Freie SO₂ nachher', inNum('so2nach', null, 'mg/l'), '(optional)')}</div>`
+      + field('Notiz', inTxt('Notiz','', 'optional')) }),
+
+    behandlung: nr => ({ title:'Zusatz / Behandlung', lead:'Anreichern, Säuern, Entsäuern, Schönen, Filtrieren …', html:
+      fassPick(nr) + inDate() + field('Was?', `<select name="Vorgangsart">${opts(VORGANG.beh)}</select>`)
+      + `<div class="two">${field('Mittel', `<select name="Stoff"><option value="">– ohne –</option>${optStoffe('')}</select>`)}${field('Menge', inNum('Stoffmenge', null, 'Einheit s. Mittel'))}</div>`
+      + field('Mehr Volumen dadurch?', inNum('Zugang_L', null, 'Liter, z. B. bei Zucker/RTK'), '(optional)')
+      + field('Notiz', inTxt('Notiz','', 'optional')) }),
+
+    analyse: nr => ({ title:'Analyse', lead:'Nur ausfüllen, was gemessen wurde.', html:
+      fassPick(nr) + inDate()
+      + `<div class="two">${field('Mostgewicht °Oe', inNum('oe'))}${field('Alkohol % vol', inNum('alk'))}</div>`
+      + `<div class="two">${field('Gesamtsäure g/l', inNum('saeure'))}${field('Restzucker g/l', inNum('rz'))}</div>`
+      + `<div class="two">${field('Freie SO₂ mg/l', inNum('so2f'))}${field('Gesamte SO₂ mg/l', inNum('so2g'))}</div>`
+      + `<div class="two">${field('pH', inNum('ph'))}${field('Labor / Notiz', inTxt('Notiz'))}</div>` }),
+
+    umpumpen: nr => { const f = fass(nr) || S.snap.behaelter.find(x=>x.Aktuelle_Weinnummer) || {}; return { title:'Umpumpen / Abstich', lead:'Der Wein behält seine Weinnummer – nur das Fass ändert sich.', html:
+      field('Aus Fass', `<select name="von" onchange="App.fillMenge(this)">${optFaesser(f.Behaelter_Nr, x=>x.Aktuelle_Weinnummer)}</select>`)
+      + field('In Fass', `<select name="nach">${zielOptionen(f)}</select>`, 'nur leere Fässer oder gleicher Wein')
+      + inDate()
+      + `<div class="two">${field('Umgepumpt (L)', inNum('menge', num(f.Fuellstand_L)))}${field('Verlust/Trub (L)', inNum('verlust', null, '0'), '(optional)')}</div>`
+      + field('Notiz', inTxt('Notiz','', 'optional')) }; },
+
+    zugang: nr => ({ title:'Zugang', lead:'Wein oder Most kommt zu diesem Wein dazu.', html:
+      fassPick(nr) + inDate() + field('Art', `<select name="Vorgangsart">${opts(VORGANG.ein)}</select>`)
+      + field('Menge (L)', inNum('Zugang_L')) + field('Lieferant (Name, Anschrift)', inTxt('Partner_Name_Anschrift','', 'bei Zukauf'))
+      + field('Beleg-Nr.', inTxt('Begleitdokument_Beleg','', 'Begleitdokument / Rechnung')) }),
+
+    abgang: nr => ({ title:'Abgang / Verkauf', lead:'Fassweinverkauf, Eigenverbrauch oder Schwund.', html:
+      fassPick(nr) + inDate() + field('Art', `<select name="Vorgangsart">${opts(VORGANG.aus)}</select>`)
+      + field('Menge (L)', inNum('Abgang_L')) + field('Käufer (Name, Anschrift)', inTxt('Partner_Name_Anschrift','', 'bei Verkauf'))
+      + field('Beleg-Nr.', inTxt('Begleitdokument_Beleg','', 'Begleitdokument / Rechnung')) }),
+
+    abfuellung: nr => ({ title:'Abfüllen', lead:'Wein auf Flaschen ziehen.', html:
+      fassPick(nr) + inDate()
+      + `<div class="two">${field('Flaschen', inNum('Flaschen_Anzahl', null, 'Anzahl', '1'))}${field('Größe', `<select name="Nennfuellmenge_L">${['0.75','1','0.5','0.375','1.5'].map(v=>`<option value="${v}">${v.replace('.',',')} L</option>`).join('')}</select>`)}</div>`
+      + field('Lohnabfüller', inTxt('Lohnabfueller','', 'nur wenn jemand anderes abfüllt'))
+      + field('Notiz', inTxt('Notiz','', 'z. B. Losnummer')) }),
+
+    befuellen: nr => { const freie = S.snap.behaelter.filter(f=>!f.Aktuelle_Weinnummer); return { title:'Wein einlagern', lead:'Neuen oder vorhandenen Wein in ein leeres Fass legen.', html:
+      field('Fass', `<select name="fass">${optFaesser(nr || (freie[0]||{}).Behaelter_Nr, f => !f.Aktuelle_Weinnummer || f.Behaelter_Nr===nr)}</select>`)
+      + field('Wein', `<select name="wein" onchange="App.toggleNeu(this)"><option value="__neu">+ neuer Wein</option>${S.snap.partien.map(p=>`<option value="${esc(p.Weinnummer)}">${esc(p.Bezeichnung)} (${esc(p.Weinnummer)})</option>`).join('')}</select>`)
+      + `<div id="neuWein">${field('Name des Weins', inTxt('Bezeichnung','', 'z. B. Riesling 2026 Kabinett'))}
+        <div class="two">${field('Weinnummer', inTxt('Weinnummer', naechsteWeinnummer()))}${field('Farbe', `<select name="Farbe">${opts(['Weiß','Rot','Rosé'])}</select>`)}</div>
+        <div class="two">${field('Rebsorte', inTxt('Rebsorte'))}${field('Kategorie', `<select name="Erzeugniskategorie">${opts(['Traubenmost','Traubenmost (Süßreserve)','teilweise gegorener Traubenmost','Jungwein','Wein'],'Traubenmost')}</select>`)}</div>
+        <div class="two">${field('Lesedatum', `<input name="Lesedatum" type="date">`)}${field('Mostgewicht °Oe', inNum('Mostgewicht_Oe'))}</div></div>`
+      + inDate() + `<div class="two">${field('Menge (L)', inNum('Zugang_L'))}${field('Herkunft', `<select name="Vorgangsart">${opts(['Eingang Lesegut','Eingang Zukauf'])}</select>`)}</div>`
+      + field('Lieferant / Lage', inTxt('Partner_Name_Anschrift','', 'optional')) }; },
+
+    korrektur: nr => { const f = fass(nr) || S.snap.behaelter[0] || {}; return { title:'Füllstand / Inhalt', lead:'Nur den aktuellen Stand des Fasses korrigieren – es entsteht kein Kellerbuch-Eintrag.', html:
+      field('Fass', `<select name="fass" onchange="App.form('korrektur', this.value)">${optFaesser(f.Behaelter_Nr, ()=>true)}</select>`)
+      + field('Wein im Fass', `<select name="wein"><option value="">– leer –</option>${S.snap.partien.map(p=>`<option value="${esc(p.Weinnummer)}" ${p.Weinnummer===f.Aktuelle_Weinnummer?'selected':''}>${esc(p.Bezeichnung)}</option>`).join('')}</select>`)
+      + `<div class="two">${field('Füllstand (L)', inNum('Fuellstand_L', num(f.Fuellstand_L)))}${field('Im Fass seit', `<input name="Befuellt_am" type="date" value="${esc(f.Befuellt_am||'')}">`)}</div>`
+      + `<p class="note">Wenn sich die Menge wirklich verändert hat (Verdunstung, Verkauf …), lieber „Abgang“ eintragen – dann stimmt auch das Kellerbuch.</p>` }; },
+
+    stoffkauf: () => ({ title:'Zusatzstoff eingekauft', lead:'Für das Stoffkonto (Pflicht bei Zucker, RTK, Säuerungs- und Entsäuerungsmitteln).', html:
+      inDate() + `<div class="two">${field('Stoff', `<select name="Stoff">${optStoffe('')}</select>`)}${field('Menge', inNum('Menge', null, 'in Einheit des Stoffs'))}</div>`
+      + field('Lieferant (Name, Anschrift)', inTxt('Lieferant')) + field('Beleg-Nr.', inTxt('Beleg')) })
+  };
+
+  function form(kind, nr){
+    const def = FORMS[kind](nr);
+    openSheet(`<h2>${def.title}</h2><p class="lead">${def.lead}</p>
+      <form id="frm" onsubmit="event.preventDefault();App.submit('${kind}')"><p id="frmErr" class="note warn" hidden></p>${def.html}
+      <button class="btn" type="submit">Speichern</button>
+      <button class="btn sec" type="button" onclick="App.closeSheet()">Abbrechen</button></form>`);
+    if (kind === 'befuellen') toggleNeu($('#frm [name=wein]'));
+  }
+  function toggleNeu(sel){ const box = $('#neuWein'); if (box) box.style.display = sel.value === '__neu' ? '' : 'none'; }
+  function fillMenge(sel){
+    const f = fass(sel.value); const m = $('#frm [name=menge]'); if (f && m) m.value = num(f.Fuellstand_L) ?? '';
+    const z = $('#frm [name=nach]'); if (f && z) z.innerHTML = zielOptionen(f);
+  }
+  function formError(msg){
+    const box = $('#frmErr'); toast(msg);
+    if (box) { box.textContent = msg; box.hidden = false; box.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  }
+
+  function submit(kind){
+    const fd = Object.fromEntries(new FormData($('#frm')).entries());
+    const now = new Date().toISOString();
+    const base = { Datum: fd.Datum || today(), Erfasst_am: now, Erfasst_von: S.name || 'Web-App' };
+    let op;
+    try { op = build(kind, fd, base); } catch (e) { return formError(e.message); }
+    op.id = uid(); op.kind = kind; op.at = now;
+    S.queue.push(op); applyLocal(op); save();
+    closeSheet(); render(); toast('Gespeichert' + (S.settings.url ? '' : ' (auf dem Gerät)'));
+    syncNow(false);
+    if (op.register && op.register.Behaelter_nach && kind !== 'umpumpen') setTimeout(()=>openFass(op.register.Behaelter_nach), 250);
+  }
+
+  function queueOp(op, msg){
+    op.id = op.id || uid(); op.at = new Date().toISOString();
+    S.queue.push(op); applyLocal(op); save(); render();
+    toast((msg || 'Gespeichert') + (S.settings.url ? '' : ' (auf dem Gerät)'));
+    syncNow(false);
+    return op;
+  }
+  function need(v, msg){ if (v === null || v === undefined || v === '' ) throw new Error(msg); return v; }
+
+  function build(kind, fd, base){
+    const fnr = fd.fass, f = fass(fnr);
+    const w = f && wein(f.Aktuelle_Weinnummer);
+    const name = w ? w.Bezeichnung : '';
+    const lvl = f ? (num(f.Fuellstand_L) || 0) : 0;
+    const reg = (o) => Object.assign({}, base, { Weinnummer: w && w.Weinnummer, Behaelter_nach: fnr, Bezeichnung_vorher: name, Bezeichnung_nachher: name }, o);
+    const setLvl = (nr, v) => v <= 0.5
+      ? { Behaelter_Nr: nr, Aktuelle_Weinnummer: null, Fuellstand_L: null, Befuellt_am: null }
+      : { Behaelter_Nr: nr, Fuellstand_L: Math.round(v * 10) / 10 };
+    switch (kind) {
+      case 'schwefeln': {
+        need(w, 'In diesem Fass liegt kein Wein.'); need(num(fd.Stoffmenge), 'Bitte die Menge eintragen.');
+        const a = [fd.so2vor && `freie SO2 vorher ${fd.so2vor} mg/l`, fd.so2nach && `nachher ${fd.so2nach} mg/l`].filter(Boolean).join('; ');
+        return { register: reg({ Vorgangsart: 'Schwefelung', Stoff: fd.Stoff, Stoffmenge: num(fd.Stoffmenge), Analysewerte: a, Notiz: fd.Notiz }) };
+      }
+      case 'behandlung': {
+        need(w, 'In diesem Fass liegt kein Wein.');
+        const zu = num(fd.Zugang_L);
+        return { register: reg({ Vorgangsart: fd.Vorgangsart, Stoff: fd.Stoff || '', Stoffmenge: num(fd.Stoffmenge), Zugang_L: zu, Notiz: fd.Notiz }),
+                 fass: zu ? [setLvl(fnr, lvl + zu)] : [] };
+      }
+      case 'analyse': {
+        need(w, 'In diesem Fass liegt kein Wein.');
+        const parts = [['oe','°Oe',''],['alk','Alkohol','% vol'],['saeure','Gesamtsäure','g/l'],['rz','Restzucker','g/l'],['so2f','freie SO2','mg/l'],['so2g','ges. SO2','mg/l'],['ph','pH','']]
+          .filter(([k]) => fd[k] !== '' && fd[k] != null).map(([k,l,u]) => k==='oe' ? `${fd[k]} °Oe` : `${l} ${String(fd[k]).replace('.',',')}${u?' '+u:''}`);
+        if (!parts.length && !fd.Notiz) throw new Error('Bitte mindestens einen Wert eintragen.');
+        return { register: reg({ Vorgangsart: 'Analyse', Analysewerte: parts.join('; '), Notiz: fd.Notiz }) };
+      }
+      case 'umpumpen': {
+        const von = fass(fd.von), nach = fass(fd.nach);
+        need(von && von.Aktuelle_Weinnummer, 'Im Ausgangsfass liegt kein Wein.'); need(nach, 'Bitte ein Zielfass wählen.');
+        if (von.Behaelter_Nr === nach.Behaelter_Nr) throw new Error('Ausgangs- und Zielfass sind gleich.');
+        const wv = wein(von.Aktuelle_Weinnummer);
+        if (nach.Aktuelle_Weinnummer && nach.Aktuelle_Weinnummer !== von.Aktuelle_Weinnummer)
+          throw new Error('Im Zielfass liegt ein anderer Wein. Das wäre ein Verschnitt – bitte ein leeres Fass wählen.');
+        const m = need(num(fd.menge), 'Bitte die umgepumpte Menge eintragen.'), verl = num(fd.verlust) || 0;
+        const rest = (num(von.Fuellstand_L) || 0) - m - verl;
+        const nachLvl = (nach.Aktuelle_Weinnummer ? (num(nach.Fuellstand_L) || 0) : 0) + m;
+        if (nachLvl > (num(nach.Fassungsvermoegen_L) || Infinity) + 0.5) throw new Error(`${nach.Behaelter_Nr} fasst nur ${fmtL(num(nach.Fassungsvermoegen_L))}.`);
+        return {
+          register: Object.assign({}, base, { Vorgangsart: 'Umpumpen/Abstich', Weinnummer: wv.Weinnummer, Behaelter_von: von.Behaelter_Nr, Behaelter_nach: nach.Behaelter_Nr,
+            Abgang_L: verl || null, Bezeichnung_vorher: wv.Bezeichnung, Bezeichnung_nachher: wv.Bezeichnung,
+            Notiz: [`${Math.round(m)} L umgepumpt`, fd.Notiz].filter(Boolean).join(' · ') }),
+          fass: [ setLvl(von.Behaelter_Nr, rest),
+                  { Behaelter_Nr: nach.Behaelter_Nr, Aktuelle_Weinnummer: wv.Weinnummer, Fuellstand_L: Math.round(nachLvl*10)/10,
+                    Befuellt_am: nach.Aktuelle_Weinnummer ? nach.Befuellt_am : base.Datum } ]
+        };
+      }
+      case 'zugang': {
+        need(w, 'In diesem Fass liegt kein Wein – nimm „Wein einlagern“.');
+        const zu = need(num(fd.Zugang_L), 'Bitte die Menge eintragen.');
+        return { register: reg({ Vorgangsart: fd.Vorgangsart, Zugang_L: zu, Partner_Name_Anschrift: fd.Partner_Name_Anschrift, Begleitdokument_Beleg: fd.Begleitdokument_Beleg }),
+                 fass: [setLvl(fnr, lvl + zu)] };
+      }
+      case 'abgang': {
+        need(w, 'In diesem Fass liegt kein Wein.');
+        const ab = need(num(fd.Abgang_L), 'Bitte die Menge eintragen.');
+        return { register: reg({ Vorgangsart: fd.Vorgangsart, Abgang_L: ab, Partner_Name_Anschrift: fd.Partner_Name_Anschrift, Begleitdokument_Beleg: fd.Begleitdokument_Beleg }),
+                 fass: [setLvl(fnr, lvl - ab)] };
+      }
+      case 'abfuellung': {
+        need(w, 'In diesem Fass liegt kein Wein.');
+        const n = need(num(fd.Flaschen_Anzahl), 'Bitte die Anzahl Flaschen eintragen.'), g = num(fd.Nennfuellmenge_L);
+        const ab = Math.round(n * g * 10) / 10;
+        return { register: reg({ Vorgangsart: 'Abfüllung', Flaschen_Anzahl: n, Nennfuellmenge_L: g, Abgang_L: ab, Lohnabfueller: fd.Lohnabfueller, Notiz: fd.Notiz }),
+                 fass: [setLvl(fnr, lvl - ab)] };
+      }
+      case 'befuellen': {
+        need(f, 'Bitte ein Fass wählen.');
+        if (f.Aktuelle_Weinnummer) throw new Error('Dieses Fass ist nicht leer.');
+        const zu = need(num(fd.Zugang_L), 'Bitte die Menge eintragen.');
+        let partie = null, wnr = fd.wein;
+        if (wnr === '__neu') {
+          need(fd.Bezeichnung, 'Bitte einen Namen für den Wein eintragen.');
+          wnr = need(fd.Weinnummer, 'Bitte eine Weinnummer eintragen.');
+          if (wein(wnr)) throw new Error('Die Weinnummer ' + wnr + ' gibt es schon.');
+          partie = { Weinnummer: wnr, Bezeichnung: fd.Bezeichnung, Erzeugniskategorie: fd.Erzeugniskategorie, Jahrgang: +String(base.Datum).slice(0,4),
+                     Rebsorte: fd.Rebsorte, Lesedatum: fd.Lesedatum, Mostgewicht_Oe: num(fd.Mostgewicht_Oe), Farbe: fd.Farbe, Status: 'aktiv' };
+        }
+        const bez = partie ? partie.Bezeichnung : weinName(wnr);
+        return { partie, register: Object.assign({}, base, { Vorgangsart: fd.Vorgangsart, Weinnummer: wnr, Behaelter_nach: fnr, Zugang_L: zu,
+                   Partner_Name_Anschrift: fd.Partner_Name_Anschrift, Bezeichnung_nachher: bez, Analysewerte: fd.Mostgewicht_Oe ? fd.Mostgewicht_Oe + ' °Oe' : '' }),
+                 fass: [{ Behaelter_Nr: fnr, Aktuelle_Weinnummer: wnr, Fuellstand_L: zu, Befuellt_am: base.Datum }] };
+      }
+      case 'korrektur': {
+        need(f, 'Bitte ein Fass wählen.');
+        const leer = !fd.wein;
+        return { fass: [{ Behaelter_Nr: fnr, Aktuelle_Weinnummer: leer ? null : fd.wein, Fuellstand_L: leer ? null : num(fd.Fuellstand_L), Befuellt_am: leer ? null : (fd.Befuellt_am || null) }] };
+      }
+      case 'stoffkauf': {
+        need(num(fd.Menge), 'Bitte die Menge eintragen.');
+        return { stoffbewegung: { Datum: base.Datum, Stoff: fd.Stoff, Art: 'Eingang', Menge: num(fd.Menge), Lieferant_Empfaenger_Name_Anschrift: fd.Lieferant, Beleg: fd.Beleg } };
+      }
+    }
+  }
+
+  function applyLocal(op){
+    const upsert = (arr, key, obj) => { const i = arr.findIndex(x => x[key] === obj[key]); if (i >= 0) arr[i] = Object.assign({}, arr[i], obj); else arr.push(Object.assign({}, obj)); };
+    if (op.weinberg) upsert(S.snap.weinberge, 'Weinberg_ID', op.weinberg);
+    if (op.mittel) upsert(S.snap.mittel, 'Mittel', op.mittel);
+    (op.arbeiten || []).forEach(a => { if (!S.snap.arbeiten.some(x => x.Arbeit_ID === a.Arbeit_ID)) S.snap.arbeiten.push(Object.assign({ _pending: true }, a)); });
+    (op.ps || []).forEach(a => { if (!S.snap.ps.some(x => x.PS_ID === a.PS_ID)) S.snap.ps.push(Object.assign({ _pending: true }, a)); });
+    if (op.partie && !wein(op.partie.Weinnummer)) S.snap.partien.push(Object.assign({}, op.partie));
+    if (op.register && !S.snap.register.some(r => r.Eintrag_ID === op.id)) S.snap.register.push(Object.assign({ Eintrag_ID: op.id, _pending: true }, op.register));
+    (op.fass || []).forEach(u => {
+      let f = fass(u.Behaelter_Nr);
+      if (!f) { f = { Behaelter_Nr: u.Behaelter_Nr }; S.snap.behaelter.push(f); }
+      Object.keys(u).forEach(k => { if (k !== 'Behaelter_Nr') f[k] = u[k] === null ? '' : u[k]; });
+    });
+  }
+
+  /* ---------- Sync ---------- */
+  function renderSync(){
+    const p = $('#syncPill'), t = $('#syncText'); p.className = 'pill';
+    if (!S.settings.url) { p.classList.add('off'); t.textContent = S.queue.length ? S.queue.length + ' nur lokal' : 'nur lokal'; return; }
+    if (syncing) { p.classList.add('wait'); t.textContent = 'überträgt …'; return; }
+    if (lastError) { p.classList.add('err'); t.textContent = S.queue.length ? S.queue.length + ' warten' : 'Fehler'; return; }
+    if (!navigator.onLine) { p.classList.add('off'); t.textContent = S.queue.length ? S.queue.length + ' warten · offline' : 'offline'; return; }
+    if (S.queue.length) { p.classList.add('wait'); t.textContent = S.queue.length + ' warten'; return; }
+    t.textContent = 'aktuell';
+  }
+
+  async function syncNow(manual){
+    const { url, token } = S.settings;
+    if (!url) { if (manual) openSettings(); return; }
+    if (syncing) return;
+    if (!navigator.onLine) { renderSync(); if (manual) toast('Kein Netz – die Einträge bleiben auf dem Gerät und werden später übertragen.'); return; }
+    syncing = true; renderSync();
+    try {
+      let res;
+      if (S.queue.length) {
+        const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token, ops: S.queue }) });
+        res = await r.json();
+      } else {
+        const r = await fetch(url + (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token));
+        res = await r.json();
+      }
+      if (!res.ok) throw new Error(res.error || 'Unbekannter Fehler');
+      const done = new Set(res.applied || []);
+      S.queue = S.queue.filter(o => !done.has(o.id));
+      S.snap = res.snapshot; S.demo = false; ensure();
+      S.queue.forEach(applyLocal);
+      lastError = ''; save();
+      if (manual) toast(done.size ? done.size + ' Einträge übertragen' : 'Alles aktuell');
+    } catch (e) {
+      lastError = e.message;
+      if (manual) toast('Übertragung fehlgeschlagen: ' + e.message);
+    } finally { syncing = false; render(); }
+  }
+
+  /* ---------- Einstellungen ---------- */
+  function openSettings(){
+    const verbunden = !!S.settings.url;
+    openSheet(`<h2>Einstellungen</h2><p class="lead">${verbunden ? 'Dieses Gerät ist mit deiner Google-Tabelle verbunden.' : 'Mit deiner Google-Tabelle verbinden. Die Daten aus dem Skript-Fenster hier einfügen – oder auf einem verbundenen Gerät den Einrichtungs-QR-Code scannen.'}</p>
+      <form id="frm" onsubmit="event.preventDefault();App.saveSettings()"><p id="frmErr" class="note warn" hidden></p>
+        ${field('Dein Name', `<input name="name" value="${esc(S.name||'')}" placeholder="z. B. Kevin" autocapitalize="words">`, '(steht bei jedem Eintrag dabei)')}
+        ${field('Web-App-URL des Skripts', `<input name="url" value="${esc(S.settings.url||'')}" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" autocorrect="off" spellcheck="false">`)}
+        ${field('Schlüssel (TOKEN)', `<input name="token" value="${esc(S.settings.token||'')}" autocapitalize="off" autocorrect="off" spellcheck="false">`)}
+        ${S.demo ? '<p class="note warn">Beim Verbinden werden die Beispieldaten durch deine echten Daten ersetzt. Einträge aus dem Demo-Modus werden verworfen.</p>' : ''}
+        <button class="btn" type="submit">${verbunden ? 'Speichern' : 'Speichern & verbinden'}</button>
+        ${verbunden ? '<button class="btn sec" type="button" onclick="App.showSetupQR()">Weiteres Gerät verbinden (QR-Code)</button>' : ''}
+        ${verbunden ? '<button class="btn sec" type="button" onclick="App.disconnect()">Verbindung trennen</button>' : ''}
+        <button class="btn sec" type="button" onclick="App.closeSheet()">Schließen</button></form>
+      ${lastError ? `<p class="note warn">Letzter Fehler: ${esc(lastError)}</p>`:''}
+      <p class="note">Auf diesem Gerät: ${S.snap.behaelter.length} Fässer, ${S.snap.partien.length} Weine, ${S.snap.register.length} Einträge, ${S.queue.length} warten auf Übertragung.</p>`);
+  }
+  async function saveSettings(){
+    const fd = Object.fromEntries(new FormData($('#frm')).entries());
+    S.name = (fd.name || '').trim();
+    const url = (fd.url || '').trim(), token = (fd.token || '').trim();
+    if (!url) { save(); closeSheet(); render(); return toast('Gespeichert'); }
+    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) return formError('Die URL muss mit https://script.google.com/ beginnen.');
+    if (!token) return formError('Bitte den Schlüssel eintragen.');
+    const neu = url !== S.settings.url || token !== S.settings.token;
+    if (S.demo && neu) S.queue = [];
+    S.settings = { url, token };
+    save(); closeSheet(); render();
+    if (neu) await syncNow(true); else toast('Gespeichert');
+  }
+  function disconnect(){ if (S.queue.length) return toast('Es warten noch Einträge – erst synchronisieren.'); S.settings = {}; save(); closeSheet(); render(); }
+
+  /* Einrichtungs-Link: #setup=<base64> mit URL + Schlüssel */
+  function setupLink(){
+    const data = btoa(unescape(encodeURIComponent(JSON.stringify({ u: S.settings.url, t: S.settings.token }))));
+    return location.href.split('#')[0] + '#setup=' + data;
+  }
+  function loadQRLib(){
+    if (window.qrcode) return Promise.resolve();
+    return new Promise((ok, fail) => { const sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'; sc.onload = ok; sc.onerror = fail; document.head.appendChild(sc); });
+  }
+  async function showSetupQR(){
+    const link = setupLink();
+    openSheet(`<h2>Weiteres Gerät verbinden</h2>
+      <p class="lead">Mit der Kamera des neuen Geräts scannen, Link öffnen, dann in Safari „Zum Home-Bildschirm“.</p>
+      <div class="card" style="padding:18px;display:grid;place-items:center"><div id="qrBox" style="width:min(260px,70vw);aspect-ratio:1">Lädt …</div></div>
+      <p class="note warn" style="margin-top:12px">Dieser Code enthält deinen Schlüssel. Nicht fotografieren und weitergeben – wer ihn hat, kann ins Kellerbuch schreiben.</p>
+      <button class="btn sec" type="button" onclick="App.copySetup()">Link kopieren</button>
+      <button class="btn sec" type="button" onclick="App.openSettings()">Zurück</button>`);
+    try {
+      await loadQRLib();
+      const qr = qrcode(0, 'M'); qr.addData(link); qr.make();
+      $('#qrBox').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+      const svg = $('#qrBox svg'); if (svg) { svg.style.width = '100%'; svg.style.height = '100%'; }
+    } catch (e) {
+      $('#qrBox').innerHTML = '<p class="note">QR-Code braucht einmal Internet. Du kannst stattdessen den Link kopieren und dir aufs andere Gerät schicken.</p>';
+    }
+  }
+  async function copySetup(){
+    try { await navigator.clipboard.writeText(setupLink()); toast('Link kopiert'); }
+    catch (e) { toast('Kopieren nicht möglich'); }
+  }
+  async function applySetup(code){
+    try {
+      const d = JSON.parse(decodeURIComponent(escape(atob(code))));
+      if (!d.u || !d.t) throw new Error();
+      if (S.queue.length && !S.demo && S.settings.url && S.settings.url !== d.u) { toast('Auf diesem Gerät warten noch Einträge.'); return; }
+      if (S.demo) S.queue = [];
+      S.settings = { url: d.u, token: d.t }; save();
+      history.replaceState(null, '', location.pathname + location.search);
+      await syncNow(true);
+      if (!S.name) { openSettings(); toast('Verbunden – trag noch deinen Namen ein.'); }
+    } catch (e) { toast('Der Einrichtungs-Link ist ungültig.'); }
+  }
+
+  function exportJSON(){
+    const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'keller-sicherung-' + today() + '.json'; a.click();
+  }
+
+  /* =====================================================================
+     WEINBERG: Weinberge, Reihen, Arbeiten, Pflanzenschutz
+     ===================================================================== */
+  const ARBEITEN = [['Rebschnitt','#8A5A2B'],['Biegen/Anbinden','#B7792F'],['Ausbrechen','#6E9A2F'],['Heften','#2F7D5B'],
+    ['Laubschnitt','#1F6E7A'],['Entblättern','#9AAE2A'],['Mulchen','#6B7F3A'],['Bodenbearbeitung','#7A5A45'],
+    ['Düngung','#6B5B9A'],['Pflanzenschutz','#2F6FB0'],['Lese','#8E2A3E'],['Sonstiges','#7A6A61']];
+  const arbeitFarbe = a => (ARBEITEN.find(x => x[0] === a) || [0,'#7A6A61'])[1];
+  const KULTUR = 'Weinrebe (VITVI)';
+  const wbUI = { arbeit: 'Rebschnitt', marks: [], id: null };
+  const jparse = (v, d) => { if (v == null || v === '') return d; if (typeof v !== 'string') return v; try { return JSON.parse(v); } catch (e) { return d; } };
+  const wbById = id => S.snap.weinberge.find(w => w.Weinberg_ID === id);
+  const wbList = () => S.snap.weinberge.filter(w => (w.Status || 'aktiv') !== 'aufgegeben').sort((a,b) => String(a.Name).localeCompare(String(b.Name), 'de', {numeric:true}));
+  const fmtNum = (v, d=1) => v == null ? '–' : (+v).toLocaleString('de-DE', { maximumFractionDigits: d });
+  const fmtHa = v => v == null || v === '' ? '' : fmtNum(v, 2) + ' ha';
+  const nowTime = () => new Date().toTimeString().slice(0,5);
+  function saison(){ const d = new Date(); const y = d.getMonth() >= 10 ? d.getFullYear() : d.getFullYear() - 1; return { iso: `${y}-11-01`, label: `Saison ${y}/${String(y+1).slice(2)}` }; }
+
+  /* ---------- Geometrie in lokalen Metern ---------- */
+  function proj(pts){
+    const lat0 = pts.reduce((s,p) => s + p[0], 0) / pts.length, lng0 = pts.reduce((s,p) => s + p[1], 0) / pts.length;
+    const kx = Math.cos(lat0 * Math.PI / 180) * 111320, ky = 110540;
+    return { to: p => [(p[1] - lng0) * kx, (p[0] - lat0) * ky], from: q => [+(lat0 + q[1] / ky).toFixed(7), +(lng0 + q[0] / kx).toFixed(7)] };
+  }
+  function areaM2(xy){ let a = 0; for (let i = 0; i < xy.length; i++) { const p = xy[i], q = xy[(i+1) % xy.length]; a += p[0]*q[1] - q[0]*p[1]; } return Math.abs(a) / 2; }
+  function genRows(xy, angDeg, spacing, offset){
+    const a = angDeg * Math.PI / 180, d = [Math.cos(a), Math.sin(a)], n = [-Math.sin(a), Math.cos(a)];
+    const dot = (p, v) => p[0]*v[0] + p[1]*v[1];
+    const ps = xy.map(p => dot(p, n)), mn = Math.min(...ps), mx = Math.max(...ps);
+    const first = mn + (((spacing / 2 + offset) % spacing) + spacing) % spacing;
+    const rows = [];
+    for (let s0 = first; s0 < mx; s0 += spacing) {
+      const ts = [];
+      for (let i = 0; i < xy.length; i++) {
+        const A = xy[i], B = xy[(i+1) % xy.length], sa = dot(A, n) - s0, sb = dot(B, n) - s0;
+        if ((sa > 0) !== (sb > 0)) { const ta = dot(A, d), tb = dot(B, d); ts.push(ta + (tb - ta) * sa / (sa - sb)); }
+      }
+      ts.sort((x, y) => x - y);
+      for (let k = 0; k + 1 < ts.length; k += 2) if (ts[k+1] - ts[k] > 2)
+        rows.push([[n[0]*s0 + d[0]*ts[k], n[1]*s0 + d[1]*ts[k]], [n[0]*s0 + d[0]*ts[k+1], n[1]*s0 + d[1]*ts[k+1]]]);
+    }
+    return rows;
+  }
+  function longestEdgeAngle(xy){
+    let best = 0, ang = 0;
+    for (let i = 0; i < xy.length; i++) { const A = xy[i], B = xy[(i+1) % xy.length], l = Math.hypot(B[0]-A[0], B[1]-A[1]);
+      if (l > best) { best = l; ang = Math.atan2(B[1]-A[1], B[0]-A[0]) * 180 / Math.PI; } }
+    return ang;
+  }
+  /* Reihen im gedrehten Rahmen (Reihen liegen waagerecht) */
+  const frameCache = new Map();
+  function frame(w){
+    const key = w.Weinberg_ID + '|' + (w.Reihen || '').length + '|' + (w.Umriss || '').length + '|' + w.Reihen_Anzahl + '|' + w.Zeilenbreite_m;
+    if (frameCache.has(key)) return frameCache.get(key);
+    let res = null;
+    const poly = jparse(w.Umriss, []), rws = jparse(w.Reihen, []);
+    const sp = num(w.Zeilenbreite_m) || 2;
+    if (poly.length >= 3 && rws.length) {
+      const P = proj(poly), xy = poly.map(P.to);
+      const r0 = [P.to([rws[0][0], rws[0][1]]), P.to([rws[0][2], rws[0][3]])];
+      const a = Math.atan2(r0[1][1] - r0[0][1], r0[1][0] - r0[0][0]), c = Math.cos(-a), s = Math.sin(-a);
+      const rot = p => [p[0]*c - p[1]*s, -(p[0]*s + p[1]*c)];
+      const rows = rws.map(r => { let A = rot(P.to([r[0], r[1]])), B = rot(P.to([r[2], r[3]])); if (A[0] > B[0]) [A, B] = [B, A];
+        return { x0: A[0], x1: B[0], y: (A[1] + B[1]) / 2, len: Math.hypot(B[0]-A[0], B[1]-A[1]) }; });
+      res = { rows, poly: xy.map(rot), sp };
+    } else {
+      const n = Math.round(num(w.Reihen_Anzahl) || 0);
+      if (n > 0) {
+        const ha = num(w.Flaeche_ha), len = ha ? Math.max(20, Math.min(400, ha * 10000 / (n * sp))) : 100;
+        const rows = Array.from({ length: n }, (_, i) => ({ x0: 0, x1: len, y: i * sp, len }));
+        res = { rows, poly: [[-sp/2, -sp/2], [len + sp/2, -sp/2], [len + sp/2, n*sp - sp/2], [-sp/2, n*sp - sp/2]], sp, schema: true };
+      }
+    }
+    // Reihen von oben nach unten nummerieren
+    if (res) { const idx = res.rows.map((r, i) => i); res.order = idx; }
+    frameCache.set(key, res);
+    return res;
+  }
+
+  /* ---------- Fortschritt ---------- */
+  function mergeIv(iv){ iv = iv.filter(x => x[1] > x[0]).sort((a,b) => a[0] - b[0]); const out = [];
+    iv.forEach(x => { const l = out[out.length - 1]; if (l && x[0] <= l[1] + 0.005) l[1] = Math.max(l[1], x[1]); else out.push([x[0], x[1]]); }); return out; }
+  function segsToRows(segs){ const m = new Map(); segs.forEach(([i, a, b]) => { if (!m.has(i)) m.set(i, []); m.get(i).push([a, b]); }); m.forEach((v, k) => m.set(k, mergeIv(v))); return m; }
+  function pctOf(f, rowsMap){
+    if (!f) return 0; let tot = 0, cov = 0;
+    f.rows.forEach((r, i) => { tot += r.len; (rowsMap.get(i) || []).forEach(iv => cov += (iv[1] - iv[0]) * r.len); });
+    return tot ? Math.min(100, 100 * cov / tot) : 0;
+  }
+  function coverage(w, arbeit){
+    const since = saison().iso;
+    const segs = [];
+    S.snap.arbeiten.filter(a => a.Weinberg_ID === w.Weinberg_ID && a.Arbeit === arbeit && String(a.Datum) >= since)
+      .forEach(a => jparse(a.Reihen, []).forEach(s => segs.push(s)));
+    const map = segsToRows(segs);
+    return { map, pct: pctOf(frame(w), map) };
+  }
+
+  /* ---------- Zeichnen ---------- */
+  function wbSVG(w, o = {}){
+    const f = frame(w);
+    if (!f) return `<svg viewBox="0 0 100 60"><text x="50" y="34" text-anchor="middle" font-size="9" fill="#A99C92">noch keine Reihen</text></svg>`;
+    const xs = f.poly.map(p => p[0]).concat(f.rows.flatMap(r => [r.x0, r.x1])), ys = f.poly.map(p => p[1]).concat(f.rows.map(r => r.y));
+    const pad = f.sp * 1.2, x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad, W = Math.max(...xs) - x0 + pad, H = Math.max(...ys) - y0 + pad;
+    const big = !!o.big, col = arbeitFarbe(o.arbeit);
+    const lw = big ? Math.max(f.sp * 0.42, W / 220) : Math.max(f.sp * 0.55, W / 60);
+    const line = (r, a, b, c, w2, extra='') => `<line x1="${(r.x0 + (r.x1 - r.x0) * a).toFixed(2)}" y1="${r.y.toFixed(2)}" x2="${(r.x0 + (r.x1 - r.x0) * b).toFixed(2)}" y2="${r.y.toFixed(2)}" stroke="${c}" stroke-width="${w2.toFixed(2)}" stroke-linecap="round" ${extra}/>`;
+    let g = `<path d="M${f.poly.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L')}Z" fill="${big ? '#EAE0CF' : '#E4D8C4'}" stroke="#C9B9A2" stroke-width="${(lw*0.5).toFixed(2)}"/>`;
+    g += f.rows.map(r => line(r, 0, 1, big ? '#BDB0A0' : '#CFC2B0', lw * 0.55)).join('');
+    if (o.arbeit) {
+      const cov = o.cov || coverage(w, o.arbeit);
+      cov.map.forEach((ivs, i) => { const r = f.rows[i]; if (r) ivs.forEach(iv => g += line(r, iv[0], iv[1], col, lw, 'opacity=".75"')); });
+    }
+    (o.marks || []).forEach(gst => gst.forEach(([i, a, b]) => { const r = f.rows[i]; if (r) g += line(r, a, b, '#fff', lw * 1.9) + line(r, a, b, col, lw * 1.25); }));
+    if (big) { const fs = Math.max(f.sp * 0.9, W / 45);
+      [0, f.rows.length - 1].forEach(i => { const r = f.rows[i]; if (r) g += `<text x="${(r.x0 - fs * 0.4).toFixed(1)}" y="${(r.y + fs * 0.35).toFixed(1)}" font-size="${fs.toFixed(1)}" text-anchor="end" fill="#8A7A70" font-family="-apple-system,sans-serif">${i + 1}</text>`; });
+      if (f.rows.length > 10) for (let i = 4; i < f.rows.length - 2; i += 5) { const r = f.rows[i]; g += `<text x="${(r.x0 - fs * 0.4).toFixed(1)}" y="${(r.y + fs * 0.35).toFixed(1)}" font-size="${(fs*0.8).toFixed(1)}" text-anchor="end" fill="#A99C92" font-family="-apple-system,sans-serif">${i + 1}</text>`; }
+    }
+    return `<svg ${big ? 'id="wbSvg"' : ''} viewBox="${(x0 - (big ? f.sp * 3 : 0)).toFixed(1)} ${y0.toFixed(1)} ${(W + (big ? f.sp * 3 : 0)).toFixed(1)} ${H.toFixed(1)}" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
+  }
+
+  /* ---------- Ansichten ---------- */
+  function arbeitChips(sel, fn){
+    return `<div class="chips">${ARBEITEN.map(([n, c]) => `<button type="button" class="${n === sel ? 'on' : ''}" onclick="App.${fn}('${n}')"><i style="background:${c}"></i>${n}</button>`).join('')}</div>`;
+  }
+  function runningBanner(){
+    const d = S.ui.psDraft; if (!d) return '';
+    return `<div class="running">💧 <div><b>Spritzung läuft</b><br><small>seit ${esc(d.beginn)} Uhr · ${esc((d.wbNames || []).join(', '))}</small></div><button onclick="App.psForm(true)">Beenden</button></div>`;
+  }
+  function viewWB(){
+    const list = wbList(), A = wbUI.arbeit;
+    const ha = list.reduce((s, w) => s + (num(w.Flaeche_ha) || 0), 0);
+    let tot = 0, cov = 0;
+    const rows = list.map(w => {
+      const c = coverage(w, A), f = frame(w), len = f ? f.rows.reduce((s, r) => s + r.len, 0) : 0;
+      tot += len; cov += len * c.pct / 100;
+      return `<button class="wb-card" onclick="App.openWeinberg('${esc(w.Weinberg_ID)}')">
+        <div class="wb-mini">${wbSVG(w, { arbeit: A, cov: c })}</div>
+        <div class="main" style="flex:1;min-width:0"><div class="title">${esc(w.Name)}</div>
+        <div class="sub">${[esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f ? f.rows.length + ' Reihen' : 'noch keine Reihen'].filter(Boolean).join(' · ')}</div>
+        <div class="bar"><i style="width:${c.pct.toFixed(1)}%;background:${arbeitFarbe(A)}"></i></div></div>
+        <div class="right">${Math.round(c.pct)} %</div></button>`;
+    }).join('');
+    return `${runningBanner()}<div class="section-title"><h2>Weinberge</h2><small>${list.length} · ${fmtHa(ha) || '0 ha'}</small></div>
+      ${arbeitChips(A, 'wbViewArbeit')}
+      <div class="prog" style="margin-top:0"><span>${esc(A)} · ${saison().label}</span><b>${tot ? Math.round(100 * cov / tot) : 0} %</b></div>
+      <div class="card">${rows || '<div class="empty">Noch kein Weinberg angelegt.</div>'}</div>
+      <button class="btn sec" style="margin-top:14px" onclick="App.wbEdit()">+ Weinberg anlegen</button>`;
+  }
+  function wbViewArbeit(a){ wbUI.arbeit = a; render(); }
+
+  function viewWBBuch(){
+    const list = [...S.snap.arbeiten].sort((a, b) => String(b.Datum).localeCompare(String(a.Datum)) || String(b.Erfasst_am || '').localeCompare(String(a.Erfasst_am || '')));
+    if (!list.length) return `<div class="section-title"><h2>Tagebuch</h2></div><div class="empty">Noch keine Arbeiten eingetragen.<br>Weinberg öffnen und über die Reihen wischen.</div>`;
+    let html = '', day = '';
+    list.forEach(a => {
+      const d = fmtDate(a.Datum);
+      if (d !== day) { if (day) html += '</div>'; html += `<div class="log-day">${d}</div><div class="card log">`; day = d; }
+      const bits = [num(a.Anteil_Prozent) != null ? fmtNum(a.Anteil_Prozent, 0) + ' % der Fläche' : '', num(a.Stunden) ? fmtNum(a.Stunden) + ' h' : '', a.Person ? 'von ' + esc(a.Person) : '', esc(a.Notiz || '')].filter(Boolean);
+      html += `<button class="row" onclick="App.openWeinberg('${esc(a.Weinberg_ID)}')"><span class="swatch" style="background:${arbeitFarbe(a.Arbeit)}"></span><div class="main">
+        <div class="title">${esc(a.Arbeit)} · ${esc(a.Weinberg || (wbById(a.Weinberg_ID) || {}).Name || '')}</div><div class="sub">${bits.join(' · ')}</div>
+        ${a._pending ? '<div class="pending">⟳ wartet auf Übertragung</div>' : ''}</div></button>`;
+    });
+    return `<div class="section-title"><h2>Tagebuch</h2><small>${list.length} Einträge</small></div>` + html + '</div>';
+  }
+
+  function wbNewEntry(){
+    const list = wbList();
+    openSheet(`<h2>Weinberg</h2><p class="lead">Was hast du gemacht?</p>
+      <div class="actions" style="grid-template-columns:1fr 1fr">
+        <button class="act" onclick="App.psForm()"><span class="ico">💧</span>Pflanzenschutz</button>
+        <button class="act" onclick="App.wbEdit()"><span class="ico">➕</span>Weinberg anlegen</button></div>
+      <div class="log-day">Arbeit eintragen – Weinberg wählen</div>
+      <div class="card">${list.map(w => `<button class="row" onclick="App.openWeinberg('${esc(w.Weinberg_ID)}')"><div class="main"><div class="title">${esc(w.Name)}</div><div class="sub">${esc(w.Rebsorte || '')} ${fmtHa(num(w.Flaeche_ha))}</div></div></button>`).join('') || '<div class="empty">Noch kein Weinberg angelegt.</div>'}</div>`);
+  }
+
+  /* ---------- Weinberg öffnen & wischen ---------- */
+  function openWeinberg(id){
+    const w = wbById(id); if (!w) return toast('Weinberg nicht gefunden');
+    if (wbUI.id !== id) wbUI.marks = [];
+    wbUI.id = id;
+    const f = frame(w);
+    const hist = S.snap.arbeiten.filter(a => a.Weinberg_ID === id).sort((a, b) => String(b.Datum).localeCompare(String(a.Datum))).slice(0, 30);
+    openSheet(`<h2>${esc(w.Name)}</h2>
+      <p class="lead">${[esc(w.Lage || ''), w.Flurstueck ? 'Flst. ' + esc(w.Flurstueck) : '', esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f ? f.rows.length + ' Reihen' : ''].filter(Boolean).join(' · ')}</p>
+      ${f ? `${arbeitChips(wbUI.arbeit, 'wbArbeit')}
+      <div class="prog" id="wbProg"></div>
+      <div class="wb-box" id="wbBox"></div>
+      <p class="note" style="margin-top:8px">Mit dem Finger über die Reihen wischen, die du geschafft hast. <b>Quer</b> über die Reihen = ganze Reihen, <b>längs</b> einer Reihe = nur dieses Stück.</p>
+      <form id="frm" onsubmit="event.preventDefault();App.wbSave()"><p id="frmErr" class="note warn" hidden></p>
+        <div class="two">${field('Datum', `<input name="Datum" type="date" value="${today()}">`)}${field('Stunden', inNum('Stunden', null, 'optional'))}</div>
+        ${field('Notiz', inTxt('Notiz', '', 'optional'))}
+        <div class="btnrow"><button class="btn sec small" type="button" onclick="App.wbUndo()">↶ Zurück</button><button class="btn sec small" type="button" onclick="App.wbAll()">Ganzer Weinberg</button></div>
+        <button class="btn" type="submit" id="wbSaveBtn">Speichern</button></form>`
+      : `<p class="note">Für diesen Weinberg sind noch keine Reihen angelegt. Zeichne den Umriss auf der Karte – oder trag unter „Daten bearbeiten“ einfach die Anzahl der Reihen ein.</p>`}
+      <div class="btnrow"><button class="btn sec small" onclick="App.openKarte('${esc(id)}')">🗺️ Umriss & Reihen</button><button class="btn sec small" onclick="App.wbEdit('${esc(id)}')">✏️ Daten bearbeiten</button></div>
+      ${hist.length ? `<div class="log-day" style="margin-top:16px">Letzte Arbeiten</div><div class="card">${hist.map(a => `<div class="row"><span class="swatch" style="background:${arbeitFarbe(a.Arbeit)}"></span><div class="main"><div class="title">${esc(a.Arbeit)}</div><div class="sub">${fmtDate(a.Datum)} · ${fmtNum(a.Anteil_Prozent, 0)} %${num(a.Stunden) ? ' · ' + fmtNum(a.Stunden) + ' h' : ''}${a.Person ? ' · ' + esc(a.Person) : ''}${a.Notiz ? ' · ' + esc(a.Notiz) : ''}</div></div></div>`).join('')}</div>` : ''}`);
+    if (f) wbDraw();
+  }
+  function wbArbeit(a){ wbUI.arbeit = a; document.querySelectorAll('#sheetBody .chips button').forEach(b => b.classList.toggle('on', b.textContent.trim() === a)); wbDraw(); }
+  function wbDraw(){
+    const w = wbById(wbUI.id), f = frame(w), box = $('#wbBox'); if (!box || !f) return;
+    const cov = coverage(w, wbUI.arbeit);
+    box.innerHTML = wbSVG(w, { big: true, arbeit: wbUI.arbeit, cov, marks: wbUI.marks });
+    const neu = segsToRows(wbUI.marks.flat()), add = pctOf(f, segsToRows(Array.from(cov.map.entries()).flatMap(([i, iv]) => iv.map(x => [i, x[0], x[1]])).concat(wbUI.marks.flat()))) - cov.pct;
+    $('#wbProg').innerHTML = `<span>${esc(wbUI.arbeit)} · ${saison().label}</span><span>${wbUI.marks.length ? `<span style="color:${arbeitFarbe(wbUI.arbeit)};font-weight:700">+${Math.max(0, add).toFixed(0)} % neu</span> · ` : ''}<b>${Math.round(cov.pct)} %</b></span>`;
+    const btn = $('#wbSaveBtn'); if (btn) { btn.disabled = !wbUI.marks.length; btn.style.opacity = wbUI.marks.length ? 1 : .45; btn.textContent = wbUI.marks.length ? `Speichern (${neu.size} Reihen)` : 'Speichern'; }
+    bindSwipe(w, f);
+  }
+  function bindSwipe(w, f){
+    const svg = $('#wbSvg'); if (!svg) return;
+    let pts = null, trail = null;
+    const toXY = e => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const m = svg.getScreenCTM(); return m ? p.matrixTransform(m.inverse()) : { x: 0, y: 0 }; };
+    svg.addEventListener('pointerdown', e => { e.preventDefault(); svg.setPointerCapture(e.pointerId); pts = [toXY(e)];
+      trail = document.createElementNS('http://www.w3.org/2000/svg', 'polyline'); trail.setAttribute('fill', 'none'); trail.setAttribute('stroke', arbeitFarbe(wbUI.arbeit));
+      trail.setAttribute('stroke-width', f.sp * 0.5); trail.setAttribute('stroke-linecap', 'round'); trail.setAttribute('stroke-linejoin', 'round'); trail.setAttribute('opacity', '.5'); svg.appendChild(trail); });
+    svg.addEventListener('pointermove', e => { if (!pts) return; e.preventDefault(); pts.push(toXY(e)); trail.setAttribute('points', pts.map(p => p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ')); });
+    const end = () => { if (!pts) return; const g = gesture(pts, f); pts = null; if (g.length) { wbUI.marks.push(g); if (navigator.vibrate) navigator.vibrate(10); } wbDraw(); };
+    svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+  }
+  function gesture(pts, f){
+    if (pts.length < 2) return [];
+    const ext = new Map(), step = f.sp / 4;
+    const hit = (x, y) => { let best = -1, bd = f.sp * 0.6;
+      f.rows.forEach((r, i) => { const dy = Math.abs(r.y - y); if (dy < bd && x >= r.x0 - f.sp * 1.5 && x <= r.x1 + f.sp * 1.5) { bd = dy; best = i; } });
+      if (best < 0) return; const r = f.rows[best], t = Math.max(0, Math.min(1, (x - r.x0) / (r.x1 - r.x0)));
+      const e = ext.get(best); if (e) { e[0] = Math.min(e[0], t); e[1] = Math.max(e[1], t); } else ext.set(best, [t, t]); };
+    for (let k = 0; k + 1 < pts.length; k++) { const a = pts[k], b = pts[k+1], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / step));
+      for (let j = 0; j <= n; j++) hit(a.x + (b.x - a.x) * j / n, a.y + (b.y - a.y) * j / n); }
+    const out = [];
+    ext.forEach(([a, b], i) => { if (b - a < 0.12) out.push([i, 0, 1]); else out.push([i, a < 0.04 ? 0 : +a.toFixed(3), b > 0.96 ? 1 : +b.toFixed(3)]); });
+    return out;
+  }
+  function wbUndo(){ wbUI.marks.pop(); wbDraw(); }
+  function wbAll(){ const f = frame(wbById(wbUI.id)); if (f) { wbUI.marks.push(f.rows.map((r, i) => [i, 0, 1])); wbDraw(); } }
+  function wbSave(){
+    const w = wbById(wbUI.id), f = frame(w);
+    if (!wbUI.marks.length) return formError('Erst über die bearbeiteten Reihen wischen.');
+    const fd = Object.fromEntries(new FormData($('#frm')).entries());
+    const map = segsToRows(wbUI.marks.flat()), segs = [];
+    map.forEach((ivs, i) => ivs.forEach(iv => segs.push([i, +iv[0].toFixed(3), +iv[1].toFixed(3)])));
+    const id = uid();
+    queueOp({ id, arbeiten: [{ Arbeit_ID: id, Datum: fd.Datum || today(), Weinberg_ID: w.Weinberg_ID, Weinberg: w.Name, Arbeit: wbUI.arbeit,
+      Anteil_Prozent: +pctOf(f, map).toFixed(1), Reihen: JSON.stringify(segs), Stunden: num(fd.Stunden), Person: S.name || '', Notiz: fd.Notiz || '', Erfasst_am: new Date().toISOString() }] },
+      `${wbUI.arbeit}: ${map.size} Reihen gespeichert`);
+    wbUI.marks = []; openWeinberg(w.Weinberg_ID);
+  }
+
+  /* ---------- Weinberg anlegen / bearbeiten ---------- */
+  function wbEdit(id){
+    const w = (id && wbById(id)) || {};
+    openSheet(`<h2>${id ? 'Weinberg bearbeiten' : 'Weinberg anlegen'}</h2><p class="lead">Umriss und Reihen zeichnest du danach auf der Karte. Ohne Karte reicht die Anzahl der Reihen.</p>
+      <form id="frm" onsubmit="event.preventDefault();App.wbEditSave('${esc(id || '')}')"><p id="frmErr" class="note warn" hidden></p>
+        ${field('Name', inTxt('Name', w.Name, 'z. B. Kirchberg oben'))}
+        <div class="two">${field('Lage', inTxt('Lage', w.Lage, 'Weinlage'))}${field('Rebsorte', inTxt('Rebsorte', w.Rebsorte))}</div>
+        <div class="two">${field('Gemarkung', inTxt('Gemarkung', w.Gemarkung))}${field('Flur', inTxt('Flur', w.Flur))}</div>
+        <div class="two">${field('Flurstück(e)', inTxt('Flurstueck', w.Flurstueck, 'z. B. 123/4'))}${field('Pflanzjahr', inNum('Pflanzjahr', num(w.Pflanzjahr), '', '1'))}</div>
+        <div class="two">${field('Fläche (ha)', inNum('Flaeche_ha', num(w.Flaeche_ha), 'z. B. 0,45'))}${field('Zeilenbreite (m)', inNum('Zeilenbreite_m', num(w.Zeilenbreite_m) || 2))}</div>
+        <div class="two">${field('Stockabstand (m)', inNum('Stockabstand_m', num(w.Stockabstand_m), 'optional'))}${field('Anzahl Reihen', inNum('Reihen_Anzahl', num(w.Reihen_Anzahl), 'ohne Karte', '1'))}</div>
+        ${field('Bemerkung', inTxt('Bemerkung', w.Bemerkung))}
+        <button class="btn" type="submit">Speichern</button>
+        ${id ? `<button class="btn sec" type="button" onclick="App.openKarte('${esc(id)}')">🗺️ Umriss & Reihen auf der Karte</button>` : ''}
+        <button class="btn sec" type="button" onclick="App.closeSheet()">Abbrechen</button></form>`);
+  }
+  function wbEditSave(id){
+    const fd = Object.fromEntries(new FormData($('#frm')).entries());
+    if (!fd.Name) return formError('Bitte einen Namen eintragen.');
+    const old = (id && wbById(id)) || {};
+    const w = Object.assign({}, old, { Weinberg_ID: id || 'WB-' + uid().slice(0, 8), Name: fd.Name.trim(), Lage: fd.Lage, Rebsorte: fd.Rebsorte, Gemarkung: fd.Gemarkung, Flur: fd.Flur,
+      Flurstueck: fd.Flurstueck, Pflanzjahr: num(fd.Pflanzjahr), Flaeche_ha: num(fd.Flaeche_ha), Zeilenbreite_m: num(fd.Zeilenbreite_m) || 2, Stockabstand_m: num(fd.Stockabstand_m),
+      Reihen_Anzahl: num(fd.Reihen_Anzahl) ?? old.Reihen_Anzahl ?? null, Bemerkung: fd.Bemerkung, Status: old.Status || 'aktiv' });
+    delete w._pending;
+    queueOp({ weinberg: w }, 'Weinberg gespeichert');
+    frameCache.clear();
+    if (!id && !num(fd.Reihen_Anzahl)) openKarte(w.Weinberg_ID); else openWeinberg(w.Weinberg_ID);
+  }
+
+  /* ---------- Karte: Umriss & Reihen ---------- */
+  let K = null;
+  function loadLeaflet(){
+    if (window.L) return Promise.resolve();
+    return new Promise((ok, fail) => {
+      const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(l);
+      const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; sc.onload = ok; sc.onerror = fail; document.head.appendChild(sc);
+    });
+  }
+  async function openKarte(id){
+    const w = wbById(id); if (!w) return;
+    const poly = jparse(w.Umriss, []);
+    K = { id, pts: poly.slice(), line: [], ang: num(w.Zeilenrichtung_Grad), sp: num(w.Zeilenbreite_m) || 2, off: num(w.Versatz_m) || 0, step: poly.length >= 3 ? 'reihen' : 'umriss' };
+    openSheet(`<h2>${esc(w.Name)}: Umriss & Reihen</h2><p class="lead" id="kHint"></p><div id="map">Karte lädt …</div><div id="kCtl"></div>`);
+    try { await loadLeaflet(); } catch (e) { $('#map').innerHTML = '<p class="note" style="margin:12px">Die Karte braucht Internet. Zu Hause mit WLAN öffnen – danach funktionieren die Reihen auch offline.</p>'; return; }
+    const yr = new Date().getFullYear();
+    const map = K.map = L.map('map', { zoomControl: true, attributionControl: true });
+    const esri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20, maxNativeZoom: 19, attribution: 'Luftbild © Esri, Maxar' });
+    const rlp = L.tileLayer.wms('https://geo4.service24.rlp.de/wms/rp_dop20.fcgi', { layers: 'rp_dop20', format: 'image/jpeg', maxZoom: 21, attribution: `©GeoBasis-DE / LVermGeoRP ${yr}, dl-de/by-2-0` });
+    const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+    const flur = L.tileLayer.wms('https://geo4.service24.rlp.de/wms/rp_lika_basis.fcgi', { layers: 'rp_lika_basis', format: 'image/png', transparent: true, maxZoom: 21, attribution: `Flurstücke ©GeoBasis-DE / LVermGeoRP ${yr}` });
+    (S.ui.mapLayer === 'rlp' ? rlp : S.ui.mapLayer === 'osm' ? osm : esri).addTo(map); flur.addTo(map);
+    L.control.layers({ 'Luftbild (Esri)': esri, 'Luftbild RLP': rlp, 'Karte': osm }, { 'Flurstücke RLP': flur }).addTo(map);
+    map.on('baselayerchange', e => { S.ui.mapLayer = e.layer === rlp ? 'rlp' : e.layer === osm ? 'osm' : 'esri'; save(); });
+    K.lyr = L.layerGroup().addTo(map);
+    const others = wbList().flatMap(x => jparse(x.Umriss, []));
+    if (K.pts.length >= 3) map.fitBounds(K.pts, { padding: [20, 20] });
+    else if (others.length) map.fitBounds(others, { padding: [40, 40] });
+    else map.setView([49.85, 8.2], 15);
+    map.on('click', e => { const p = [+e.latlng.lat.toFixed(7), +e.latlng.lng.toFixed(7)];
+      if (K.step === 'umriss') K.pts.push(p); else if (K.step === 'richtung') { K.line.push(p); if (K.line.length > 2) K.line = K.line.slice(-2); } kDraw(); });
+    setTimeout(() => map.invalidateSize(), 320);
+    kDraw();
+  }
+  function kRows(){
+    const P = proj(K.pts), xy = K.pts.map(P.to);
+    if (K.ang == null) K.ang = longestEdgeAngle(xy);
+    const rows = genRows(xy, K.ang, K.sp, K.off);
+    return { rows: rows.map(r => [...P.from(r[0]), ...P.from(r[1])]), area: areaM2(xy) };
+  }
+  function kDraw(){
+    if (!K || !K.map) return;
+    K.lyr.clearLayers();
+    const done = K.step !== 'umriss';
+    if (K.pts.length) L.polygon(K.pts, { color: '#F5EFE6', weight: 2, fillColor: '#F5EFE6', fillOpacity: done ? 0.08 : 0.18, dashArray: done ? null : '6 6' }).addTo(K.lyr);
+    if (K.step === 'umriss') K.pts.forEach(p => L.circleMarker(p, { radius: 6, color: '#fff', weight: 2, fillColor: '#6E1F2F', fillOpacity: 1 }).addTo(K.lyr));
+    if (K.step === 'richtung' && K.line.length) { L.polyline(K.line, { color: '#F0B35A', weight: 4 }).addTo(K.lyr); K.line.forEach(p => L.circleMarker(p, { radius: 6, color: '#fff', weight: 2, fillColor: '#F0B35A', fillOpacity: 1 }).addTo(K.lyr)); }
+    let info = '';
+    if (K.step === 'reihen' && K.pts.length >= 3) { const r = kRows(); K.rowsLL = r.rows; K.area = r.area;
+      r.rows.forEach((x, i) => L.polyline([[x[0], x[1]], [x[2], x[3]]], { color: i === 0 ? '#F0B35A' : '#FFFFFF', weight: 2, opacity: .9 }).addTo(K.lyr));
+      info = `<b>${r.rows.length} Reihen</b> · ${fmtNum(r.area / 10000, 3)} ha · Zeilenbreite ${fmtNum(K.sp, 2)} m · Winkel ${fmtNum(((K.ang % 180) + 180) % 180, 1)}°`; }
+    const H = { umriss: 'Schritt 1/3: Tippe die Ecken des Weinbergs der Reihe nach an. Die Flurstücksgrenzen helfen dabei.',
+      richtung: 'Schritt 2/3: Tippe zwei Punkte entlang einer Rebzeile (Anfang und Ende einer Reihe).', reihen: 'Schritt 3/3: Passen die Reihen? Mit den Knöpfen fein ausrichten, bis die weißen Linien auf den Zeilen liegen.' };
+    $('#kHint').textContent = H[K.step];
+    const B = (t, f) => `<button type="button" onclick="${f}">${t}</button>`;
+    $('#kCtl').innerHTML = K.step === 'umriss'
+      ? `<div class="mapctl">${B('↶ Punkt zurück', 'App.kUndo()')}${B('📍 Mein Standort', 'App.kGps()')}</div><button class="btn" onclick="App.kStep('richtung')" ${K.pts.length < 3 ? 'disabled style="opacity:.45"' : ''}>Weiter: Zeilenrichtung</button>`
+      : K.step === 'richtung'
+      ? `<div class="mapctl">${B('↶ Zurück zum Umriss', "App.kStep('umriss')")}</div><button class="btn" onclick="App.kStep('reihen')">${K.line.length === 2 ? 'Weiter: Reihen prüfen' : 'Überspringen (längste Kante)'}</button>`
+      : `<p class="note" style="margin:10px 0">${info}</p>
+         <div class="mapctl">${B('⟲ −1°', 'App.kAdj("ang",-1)')}${B('−0,2°', 'App.kAdj("ang",-0.2)')}${B('+0,2°', 'App.kAdj("ang",0.2)')}${B('⟳ +1°', 'App.kAdj("ang",1)')}</div>
+         <div class="mapctl">${B('◀ Versatz', 'App.kAdj("off",-0.2)')}${B('Versatz ▶', 'App.kAdj("off",0.2)')}${B('Zeile enger', 'App.kAdj("sp",-0.05)')}${B('Zeile weiter', 'App.kAdj("sp",0.05)')}</div>
+         <div class="mapctl">${B('Richtung neu', "App.kStep('richtung')")}${B('Umriss neu', 'App.kNew()')}</div>
+         ${S.snap.arbeiten.some(a => a.Weinberg_ID === K.id) ? '<p class="note warn">Achtung: Wenn sich die Zahl der Reihen ändert, passen frühere Markierungen evtl. nicht mehr genau.</p>' : ''}
+         <button class="btn" onclick="App.kSave()">Umriss & Reihen speichern</button>`;
+  }
+  function kStep(s){
+    if (s === 'reihen' && K.step === 'richtung' && K.line.length === 2) { const P = proj(K.pts), a = P.to(K.line[0]), b = P.to(K.line[1]); K.ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI; K.off = 0; }
+    if (s === 'richtung') K.line = [];
+    K.step = s; kDraw();
+  }
+  function kNew(){ K.pts = []; K.ang = null; K.step = 'umriss'; kDraw(); }
+  function kUndo(){ K.pts.pop(); kDraw(); }
+  function kGps(){
+    if (!navigator.geolocation) return toast('Standort nicht verfügbar');
+    navigator.geolocation.getCurrentPosition(p => { K.pts.push([+p.coords.latitude.toFixed(7), +p.coords.longitude.toFixed(7)]); K.map.panTo([p.coords.latitude, p.coords.longitude]);
+      toast(`Punkt gesetzt (±${Math.round(p.coords.accuracy)} m)`); kDraw(); }, () => toast('Standort nicht verfügbar'), { enableHighAccuracy: true, timeout: 15000 });
+  }
+  function kAdj(k, v){ if (k === 'ang') K.ang += v; if (k === 'off') K.off += v; if (k === 'sp') K.sp = Math.max(0.8, +(K.sp + v).toFixed(2)); kDraw(); }
+  function kSave(){
+    const w = wbById(K.id); if (!w || !K.rowsLL) return;
+    const upd = Object.assign({}, w, { Umriss: JSON.stringify(K.pts), Reihen: JSON.stringify(K.rowsLL.map(r => r.map(v => +v.toFixed(7)))), Reihen_Anzahl: K.rowsLL.length,
+      Zeilenrichtung_Grad: +K.ang.toFixed(2), Versatz_m: +K.off.toFixed(2), Zeilenbreite_m: K.sp, Flaeche_ha: num(w.Flaeche_ha) || +(K.area / 10000).toFixed(4) });
+    delete upd._pending;
+    queueOp({ weinberg: upd }, `${K.rowsLL.length} Reihen gespeichert`);
+    frameCache.clear(); try { K.map.remove(); } catch (e) {} K = null;
+    openWeinberg(upd.Weinberg_ID);
+  }
+
+  /* ---------- Pflanzenschutz ---------- */
+  function viewPS(){
+    const groups = new Map();
+    [...S.snap.ps].sort((a, b) => String(b.Datum).localeCompare(String(a.Datum)) || String(b.Beginn).localeCompare(String(a.Beginn))).forEach(r => {
+      const k = r.Spritzung_ID || r.PS_ID; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
+    const cards = Array.from(groups.values()).map(rs => {
+      const r0 = rs[0], wbs = [...new Set(rs.map(r => r.Weinberg))], mittel = new Map();
+      rs.forEach(r => { const m = mittel.get(r.Mittel) || { menge: 0, einheit: r.Einheit }; m.menge += num(r.Menge) || 0; mittel.set(r.Mittel, m); });
+      const ha = [...new Map(rs.map(r => [r.Weinberg_ID, num(r.Flaeche_ha) || 0])).values()].reduce((s, v) => s + v, 0);
+      const t = v => String(v || '').slice(11, 16) || String(v || '');
+      return `<div class="row"><span class="swatch" style="background:${arbeitFarbe('Pflanzenschutz')}"></span><div class="main">
+        <div class="title">${fmtDate(r0.Datum)} · ${t(r0.Beginn)}${r0.Ende ? '–' + t(r0.Ende) : ''} Uhr</div>
+        <div class="sub">${esc(wbs.join(', '))} · ${fmtNum(ha, 2)} ha${r0.Entwicklungsstadium ? ' · BBCH ' + esc(r0.Entwicklungsstadium) : ''}${r0.Anwender ? ' · ' + esc(r0.Anwender) : ''}</div>
+        <div class="sub" style="color:var(--ink)">${Array.from(mittel.entries()).map(([n, m]) => `${esc(n)} <b>${fmtNum(m.menge, 2)} ${esc(m.einheit || '')}</b>`).join(' · ')}</div>
+        ${rs.some(r => r._pending) ? '<div class="pending">⟳ wartet auf Übertragung</div>' : ''}</div></div>`;
+    }).join('');
+    const ml = [...S.snap.mittel].sort((a, b) => String(a.Mittel).localeCompare(String(b.Mittel), 'de'));
+    return `${runningBanner()}<div class="section-title"><h2>Pflanzenschutz</h2><small>${saison().label}</small></div>
+      ${S.ui.psDraft ? '' : '<button class="btn" style="margin-bottom:14px" onclick="App.psForm()">💧 Spritzung planen & starten</button>'}
+      <div class="card">${cards || '<div class="empty">Noch keine Spritzung dokumentiert.</div>'}</div>
+      <div class="section-title" style="margin-top:22px"><h2>Mittel</h2><small>${ml.length}</small></div>
+      <div class="card">${ml.map(m => `<button class="row" onclick="App.mittelForm('${esc(m.Mittel)}')"><div class="main"><div class="title">${esc(m.Mittel)}</div>
+        <div class="sub">${[m.Zulassungsnummer ? 'Zul.-Nr. ' + esc(m.Zulassungsnummer) : '', m.Wirkstoff ? esc(m.Wirkstoff) : '', num(m.Basisaufwand_je_ha) != null ? 'Basis ' + fmtNum(m.Basisaufwand_je_ha, 3) + ' ' + esc(m.Einheit || '') + '/ha' : '', num(m.Wartezeit_Tage) != null ? 'WZ ' + m.Wartezeit_Tage + ' Tage' : ''].filter(Boolean).join(' · ')}</div></div></button>`).join('') || '<div class="empty">Noch keine Mittel angelegt.</div>'}</div>
+      <button class="btn sec" style="margin-top:14px" onclick="App.mittelForm()">+ Mittel anlegen</button>
+      <p class="note" style="margin-top:14px">Aufwandmengen, Auflagen und Wartezeiten immer mit der Gebrauchsanleitung und der aktuellen Zulassung abgleichen. Die App rechnet nur mit dem, was du hier einträgst.</p>`;
+  }
+  function mittelForm(name){
+    const m = (name && S.snap.mittel.find(x => x.Mittel === name)) || {};
+    openSheet(`<h2>${name ? 'Mittel bearbeiten' : 'Mittel anlegen'}</h2><p class="lead">Angaben aus der Gebrauchsanleitung übernehmen.</p>
+      <form id="frm" onsubmit="event.preventDefault();App.mittelSave('${esc(name || '')}')"><p id="frmErr" class="note warn" hidden></p>
+        ${field('Name des Mittels', inTxt('Mittel', m.Mittel))}
+        <div class="two">${field('Zulassungsnummer', inTxt('Zulassungsnummer', m.Zulassungsnummer))}${field('Einheit', `<select name="Einheit">${opts(['L', 'kg'], m.Einheit || 'L')}</select>`)}</div>
+        ${field('Wirkstoff', inTxt('Wirkstoff', m.Wirkstoff, 'optional'))}
+        <div class="two">${field('Basisaufwand je ha', inNum('Basisaufwand_je_ha', num(m.Basisaufwand_je_ha)))}${field('Max. je ha', inNum('Max_Aufwand_je_ha', num(m.Max_Aufwand_je_ha), 'optional'))}</div>
+        <div class="two">${field('Wartezeit (Tage)', inNum('Wartezeit_Tage', num(m.Wartezeit_Tage), '', '1'))}${field('Bemerkung', inTxt('Bemerkung', m.Bemerkung, 'Auflagen, Abstände'))}</div>
+        <button class="btn" type="submit">Speichern</button><button class="btn sec" type="button" onclick="App.go('ps')">Abbrechen</button></form>`);
+  }
+  function mittelSave(oldName){
+    const fd = Object.fromEntries(new FormData($('#frm')).entries());
+    if (!fd.Mittel) return formError('Bitte den Namen eintragen.');
+    if (oldName && oldName !== fd.Mittel.trim()) return formError('Der Name kann nicht geändert werden – lege das Mittel neu an.');
+    queueOp({ mittel: { Mittel: fd.Mittel.trim(), Zulassungsnummer: fd.Zulassungsnummer, Wirkstoff: fd.Wirkstoff, Einheit: fd.Einheit, Basisaufwand_je_ha: num(fd.Basisaufwand_je_ha),
+      Max_Aufwand_je_ha: num(fd.Max_Aufwand_je_ha), Wartezeit_Tage: num(fd.Wartezeit_Tage), Bemerkung: fd.Bemerkung } }, 'Mittel gespeichert');
+    closeSheet(); tab = 'ps'; render();
+  }
+
+  function psForm(resume){
+    const d = resume ? S.ui.psDraft : null, v = d ? d.fd : {};
+    const sel = new Set(d ? d.fd.wb : []);
+    const ml = [...S.snap.mittel].sort((a, b) => String(a.Mittel).localeCompare(String(b.Mittel), 'de'));
+    const mOpts = s => `<option value="">– Mittel –</option>` + ml.map(m => `<option value="${esc(m.Mittel)}" ${m.Mittel === s ? 'selected' : ''}>${esc(m.Mittel)} (${esc(m.Einheit || '')})</option>`).join('');
+    const lines = [1, 2, 3, 4].map(i => `<div class="mline"><select name="m${i}" onchange="App.psMittelPick(${i})">${mOpts(v['m' + i])}</select>${inNum('a' + i, v['a' + i] != null && v['a' + i] !== '' ? v['a' + i] : null, 'je ha (Basis)')}</div>`).join('');
+    openSheet(`<h2>${d ? 'Spritzung beenden' : 'Spritzung'}</h2><p class="lead">${d ? 'Prüfen, Ende eintragen, speichern.' : 'Erst rechnen, dann starten – oder nachträglich als erledigt eintragen.'}</p>
+      <form id="frm" oninput="App.psCalc()" onsubmit="event.preventDefault();App.psSave()"><p id="frmErr" class="note warn" hidden></p>
+        <label style="display:block;font-size:13px;font-weight:600;color:#5E4B42;margin:0 2px 5px">Weinberge</label>
+        <div class="checks" style="margin-bottom:12px">${wbList().map(w => `<label><input type="checkbox" name="wb" value="${esc(w.Weinberg_ID)}" ${sel.has(w.Weinberg_ID) ? 'checked' : ''}>${esc(w.Name)}<small>${fmtHa(num(w.Flaeche_ha)) || 'Fläche fehlt'}</small></label>`).join('') || '<p class="note">Erst einen Weinberg anlegen.</p>'}</div>
+        <div class="two">${field('Fläche gesamt (ha)', inNum('flaeche', v.flaeche ?? null, 'automatisch'))}${field('Faktor', inNum('faktor', v.faktor ?? 1), '(Entw.-Stadium)')}</div>
+        <div class="two">${field('Wasser (L/ha)', inNum('wasser', v.wasser ?? (S.ui.wasser || 400)))}${field('Tank (L)', inNum('tank', v.tank ?? (S.ui.tank || 1000)))}</div>
+        <label style="display:block;font-size:13px;font-weight:600;color:#5E4B42;margin:0 2px 5px">Mittel und Basisaufwand je ha</label>${lines}
+        ${ml.length ? '' : '<p class="note">Noch keine Mittel angelegt – unter „Spritzen“ → „Mittel anlegen“.</p>'}
+        <div class="card" style="padding:10px 12px;margin:6px 0 14px" id="psOut"></div>
+        <div class="two">${field('BBCH / Stadium', inTxt('bbch', v.bbch, 'z. B. 57'))}${field('Schaderreger', inTxt('schad', v.schad, 'z. B. Peronospora'))}</div>
+        <div class="two">${field('Gerät', inTxt('geraet', v.geraet ?? S.ui.geraet, 'Sprühgerät'))}${field('Anwender', inTxt('anwender', v.anwender ?? S.name))}</div>
+        <div class="two">${field('Datum', `<input name="datum" type="date" value="${esc(v.datum || today())}">`)}${field('Notiz', inTxt('notiz', v.notiz))}</div>
+        <div class="two">${field('Beginn', `<input name="beginn" type="time" value="${esc(d ? d.beginn : (v.beginn || ''))}">`)}${field('Ende', `<input name="ende" type="time" value="${d ? nowTime() : ''}">`)}</div>
+        ${d ? '<button class="btn" type="submit">Beenden & dokumentieren</button><button class="btn sec" type="button" onclick="App.psCancel()">Spritzung verwerfen</button>'
+            : '<button class="btn" type="button" onclick="App.psStart()">▶ Spritzung jetzt starten</button><button class="btn sec" type="submit">Als erledigt speichern (Beginn & Ende eintragen)</button>'}
+        <button class="btn sec" type="button" onclick="App.closeSheet()">Schließen</button></form>`);
+    psCalc();
+  }
+  function psMittelPick(i){
+    const f = $('#frm'), m = S.snap.mittel.find(x => x.Mittel === f['m' + i].value);
+    if (m && num(m.Basisaufwand_je_ha) != null) f['a' + i].value = m.Basisaufwand_je_ha;
+    psCalc();
+  }
+  function psRead(){
+    const f = $('#frm'), fd = Object.fromEntries(new FormData(f).entries()); fd.wb = new FormData(f).getAll('wb');
+    const wbs = fd.wb.map(wbById).filter(Boolean), haSum = wbs.reduce((s, w) => s + (num(w.Flaeche_ha) || 0), 0);
+    const ha = num(fd.flaeche) ?? haSum, faktor = num(fd.faktor) || 1, wasser = num(fd.wasser), tank = num(fd.tank);
+    const mittel = [1, 2, 3, 4].map(i => ({ m: S.snap.mittel.find(x => x.Mittel === fd['m' + i]), a: num(fd['a' + i]) })).filter(x => x.m && x.a);
+    const pf = f.flaeche; if (pf && !fd.flaeche) pf.placeholder = haSum ? fmtNum(haSum, 3) + ' (Summe)' : 'automatisch';
+    return { fd, wbs, ha, haSum, faktor, wasser, tank, mittel };
+  }
+  function psCalc(){
+    const out = $('#psOut'); if (!out) return;
+    const c = psRead();
+    if (!c.ha) { out.innerHTML = '<span style="color:var(--muted)">Weinberge wählen – dann rechnet die App.</span>'; return; }
+    const wGes = c.wasser ? c.wasser * c.ha : null, fills = wGes && c.tank ? wGes / c.tank : null;
+    const full = fills ? Math.floor(fills + 1e-9) : 0, rest = fills ? wGes - full * c.tank : 0;
+    const rows = c.mittel.map(({ m, a }) => { const eff = a * c.faktor, ges = eff * c.ha, proTank = c.wasser && c.tank ? eff * c.tank / c.wasser : null;
+      const warn = num(m.Max_Aufwand_je_ha) != null && eff > num(m.Max_Aufwand_je_ha) + 1e-9 ? ` <span style="color:#B4452A">über Max.!</span>` : '';
+      return `<tr><td>${esc(m.Mittel)}${warn}<br><small style="color:var(--muted)">${fmtNum(eff, 3)} ${esc(m.Einheit || '')}/ha</small></td><td>${proTank != null ? fmtNum(proTank, 3) : '–'}</td><td><b>${fmtNum(ges, 3)} ${esc(m.Einheit || '')}</b></td></tr>`; }).join('');
+    out.innerHTML = `<table class="calc"><tr><th>Mittel</th><th>je voller Tank</th><th>gesamt</th></tr>${rows || '<tr><td colspan="3" style="color:var(--muted)">Mittel und Aufwand eintragen</td></tr>'}</table>
+      <p style="margin:8px 0 0;font-size:14px">${fmtNum(c.ha, 3)} ha · Wasser <b>${wGes ? fmtNum(wGes, 0) + ' L' : '–'}</b>${fills ? (full === 0 ? ` = 1 Tankfüllung mit ${fmtNum(wGes, 0)} L` : ` = ${full} volle${full === 1 ? 'r' : ''} Tank${full === 1 ? '' : 's'}${rest > 0.5 ? ` + Rest ${fmtNum(rest, 0)} L` : ''}`) : ''}</p>`;
+  }
+  function psStart(){
+    const c = psRead();
+    if (!c.wbs.length) return formError('Bitte mindestens einen Weinberg wählen.');
+    if (!c.mittel.length) return formError('Bitte mindestens ein Mittel mit Aufwand eintragen.');
+    S.ui.psDraft = { fd: c.fd, beginn: c.fd.beginn || nowTime(), wbNames: c.wbs.map(w => w.Name) };
+    S.ui.wasser = c.wasser; S.ui.tank = c.tank; S.ui.geraet = c.fd.geraet; save();
+    closeSheet(); tab = 'ps'; render(); toast('Spritzung gestartet – nach dem Spritzen auf „Beenden“ tippen.');
+  }
+  function psCancel(){ delete S.ui.psDraft; save(); closeSheet(); render(); toast('Spritzung verworfen'); }
+  function psSave(){
+    const c = psRead(), fd = c.fd;
+    if (!c.wbs.length) return formError('Bitte mindestens einen Weinberg wählen.');
+    if (!c.mittel.length) return formError('Bitte mindestens ein Mittel mit Aufwand eintragen.');
+    if (!fd.beginn) return formError('Bitte die Uhrzeit für den Beginn eintragen.');
+    if (!c.ha) return formError('Bitte die Fläche eintragen (bei den Weinbergen fehlt die Fläche).');
+    const datum = fd.datum || today(), sid = uid(), now = new Date().toISOString();
+    const scale = c.haSum ? c.ha / c.haSum : 1, ps = [], arbeiten = [];
+    c.wbs.forEach((w, wi) => {
+      const ha = (num(w.Flaeche_ha) || (c.ha / c.wbs.length)) * (c.haSum ? scale : 1);
+      c.mittel.forEach(({ m, a }, mi) => ps.push({ PS_ID: `${sid}-${wi}-${mi}`, Spritzung_ID: sid, Datum: datum, Beginn: `${datum}T${fd.beginn}`, Ende: fd.ende ? `${datum}T${fd.ende}` : '',
+        Weinberg_ID: w.Weinberg_ID, Weinberg: w.Name, Flurstueck: [w.Gemarkung, w.Flur ? 'Flur ' + w.Flur : '', w.Flurstueck].filter(Boolean).join(' '), Flaeche_ha: +ha.toFixed(4),
+        Kultur: KULTUR, Mittel: m.Mittel, Zulassungsnummer: m.Zulassungsnummer || '', Aufwand_je_ha: +(a * c.faktor).toFixed(4), Einheit: m.Einheit || '', Menge: +(a * c.faktor * ha).toFixed(4),
+        Faktor: c.faktor, Wasser_L_je_ha: c.wasser, Entwicklungsstadium: fd.bbch || '', Schaderreger: fd.schad || '', Anwender: fd.anwender || S.name || '', Geraet: fd.geraet || '', Notiz: fd.notiz || '', Erfasst_am: now }));
+      const f = frame(w);
+      if (f) arbeiten.push({ Arbeit_ID: `${sid}-a${wi}`, Datum: datum, Weinberg_ID: w.Weinberg_ID, Weinberg: w.Name, Arbeit: 'Pflanzenschutz', Anteil_Prozent: 100,
+        Reihen: JSON.stringify(f.rows.map((r, i) => [i, 0, 1])), Person: fd.anwender || S.name || '', Notiz: c.mittel.map(x => x.m.Mittel).join(', '), Erfasst_am: now });
+    });
+    S.ui.wasser = c.wasser; S.ui.tank = c.tank; S.ui.geraet = fd.geraet; delete S.ui.psDraft;
+    queueOp({ id: sid, ps, arbeiten }, 'Spritzung dokumentiert');
+    closeSheet(); tab = 'ps'; render();
+  }
+
+  /* ---------- Demo-Weinberge ---------- */
+  function demoWeinberge(){
+    const mk = (id, name, lage, sorte, c, w, h, rot, sp, extra) => {
+      const P = proj([c]), a = rot * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
+      const xy = [[-w/2, -h/2], [w/2, -h/2 + h * 0.08], [w/2, h/2], [-w/2, h/2]].map(([x, y]) => [x*ca - y*sa, x*sa + y*ca]);
+      const rows = genRows(xy, rot, sp, 0).map(r => [...P.from(r[0]), ...P.from(r[1])]);
+      return Object.assign({ Weinberg_ID: id, Name: name, Lage: lage, Rebsorte: sorte, Gemarkung: 'Beispielheim', Flur: '3', Flurstueck: id.slice(-2) + '/1',
+        Flaeche_ha: +(areaM2(xy) / 10000).toFixed(3), Zeilenbreite_m: sp, Reihen_Anzahl: rows.length, Zeilenrichtung_Grad: rot, Versatz_m: 0,
+        Umriss: JSON.stringify(xy.map(P.from)), Reihen: JSON.stringify(rows), Status: 'aktiv' }, extra || {});
+    };
+    S.snap.weinberge = [
+      mk('WB-DEMO01', 'Kirchberg', 'Sonnenhang', 'Dornfelder', [49.851, 8.201], 120, 64, 12, 2.0),
+      mk('WB-DEMO02', 'Am Bildstock', 'Sonnenhang', 'Riesling', [49.849, 8.205], 90, 50, -8, 1.8),
+      mk('WB-DEMO03', 'Hohl', 'Mühlberg', 'Sauvignon Blanc', [49.853, 8.207], 70, 44, 25, 2.0)
+    ];
+    const f = frame(S.snap.weinberge[0]);
+    const seg = f ? f.rows.slice(0, 14).map((r, i) => [i, 0, 1]).concat([[14, 0, 0.5]]) : [];
+    S.snap.arbeiten = [{ Arbeit_ID: 'demo-a1', Datum: today(), Weinberg_ID: 'WB-DEMO01', Weinberg: 'Kirchberg', Arbeit: 'Rebschnitt',
+      Anteil_Prozent: f ? +pctOf(f, segsToRows(seg)).toFixed(1) : 0, Reihen: JSON.stringify(seg), Stunden: 6, Person: 'Demo', Notiz: '' }]
+;
+    S.snap.mittel = [{ Mittel: 'Beispielmittel A (Fungizid)', Einheit: 'L', Basisaufwand_je_ha: 0.4, Max_Aufwand_je_ha: 1.6, Wartezeit_Tage: 35, Bemerkung: 'nur Beispiel' },
+                     { Mittel: 'Beispielmittel B (Netzschwefel)', Einheit: 'kg', Basisaufwand_je_ha: 1.2, Max_Aufwand_je_ha: 4.8, Wartezeit_Tage: 56, Bemerkung: 'nur Beispiel' }];
+  }
+
+  /* ---------- Sheet & Navigation ---------- */
+  function openSheet(html){ $('#sheetBody').innerHTML = html; $('#sheet').scrollTop = 0; $('#sheet').classList.add('on'); $('#backdrop').classList.add('on'); }
+  function closeSheet(){ $('#sheet').classList.remove('on'); $('#backdrop').classList.remove('on'); if (location.hash) history.replaceState(null, '', location.pathname + location.search); }
+  function go(t){ tab = t; closeSheet(); render(); window.scrollTo(0,0); }
+
+  function route(){
+    const su = location.hash.match(/setup=([^&]+)/);
+    if (su) return applySetup(su[1]);
+    const m = location.hash.match(/fass=([^&]+)/);
+    if (m) { mode = 'keller'; tab = 'faesser'; render(); openFass(decodeURIComponent(m[1])); }
+    const w = location.hash.match(/wb=([^&]+)/);
+    if (w) { mode = 'weinberg'; tab = 'wb'; render(); openWeinberg(decodeURIComponent(w[1])); }
+  }
+
+  /* ---------- Start ---------- */
+  function init(){
+    ensure(); render(); route();
+    window.addEventListener('hashchange', route);
+    window.addEventListener('online', () => syncNow(false));
+    window.addEventListener('offline', renderSync);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) syncNow(false); });
+    setInterval(() => syncNow(false), 120000);
+    syncNow(false);
+    if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+
+  return { init, go, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
+})();
+App.init();
+</script>
+</body>
+</html>
