@@ -141,7 +141,14 @@ input:focus,select:focus,textarea:focus{outline:2px solid rgba(110,31,47,.35);bo
 /* Weinberge */
 .wb-card{display:flex;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);width:100%;text-align:left}
 .wb-card:last-child{border-bottom:0}
-.wb-mini{flex:0 0 74px;height:60px;border-radius:10px;background:#EFE6D6;overflow:hidden}
+.wb-mini{flex:0 0 74px;height:60px;border-radius:10px;background:#FBF8F3;border:1px solid #E2D6C4;overflow:hidden}
+.st{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;margin:5px 4px 0 0;white-space:nowrap;line-height:1.2}
+.st.run{color:#fff}
+.st.done{background:#EFE8DC;color:#6B5E54;font-weight:500}
+.st.ok{background:#E2F0E5;color:#1E6B3A}.st.mid{background:#FBEFCF;color:#7A5600}.st.late{background:#F8DEDA;color:#A0281C}.st.neu{background:#E6EEF6;color:#2F5F8F}
+.st.none{background:none;color:#A99C92;font-weight:400;padding-left:0}
+.lauf{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.lauf:last-child{border-bottom:0}.lauf .main{flex:1;min-width:0}.lauf b.p{font-size:15px}
 .wb-mini svg{width:100%;height:100%}
 .bar{height:7px;border-radius:4px;background:#EDE3D6;overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;border-radius:4px}
@@ -1255,8 +1262,8 @@ const App = (() => {
     const big = !!o.big, col = arbeitFarbe(o.arbeit);
     const lw = big ? Math.max(f.sp * 0.42, W / 220) : Math.max(f.sp * 0.55, W / 60);
     const line = (r, a, b, c, w2, extra='') => `<line x1="${(r.x0 + (r.x1 - r.x0) * a).toFixed(2)}" y1="${r.y.toFixed(2)}" x2="${(r.x0 + (r.x1 - r.x0) * b).toFixed(2)}" y2="${r.y.toFixed(2)}" stroke="${c}" stroke-width="${w2.toFixed(2)}" stroke-linecap="round" ${extra}/>`;
-    let g = `<path d="${f.polys.map(pl => 'M' + pl.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L') + 'Z').join('')}" fill="${big ? '#EAE0CF' : '#E4D8C4'}" stroke="#C9B9A2" stroke-width="${(lw*0.5).toFixed(2)}"/>`;
-    g += base.map(r => line(r, 0, 1, big ? '#BDB0A0' : '#CFC2B0', lw * 0.55)).join('');
+    let g = `<path d="${f.polys.map(pl => 'M' + pl.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L') + 'Z').join('')}" fill="${big ? '#EAE0CF' : '#E6D6BA'}" stroke="${big ? '#C9B9A2' : '#9C8668'}" stroke-width="${(lw*0.5).toFixed(2)}"/>`;
+    g += base.map(r => line(r, 0, 1, big ? '#BDB0A0' : '#B9A68A', lw * 0.55)).join('');
     if (f.gasse && big) g += f.rows.map(r => line(r, 0, 1, '#D9CDBB', lw * 0.35, 'stroke-dasharray="' + (f.sp * 0.6).toFixed(1) + ' ' + (f.sp * 0.6).toFixed(1) + '"')).join('');
     if (o.arbeit) {
       const cov = o.cov || coverage(w, o.arbeit);
@@ -1296,6 +1303,11 @@ const App = (() => {
     const list = S.ui.wbSorte ? all.filter(w => String(w.Rebsorte || '').trim() === S.ui.wbSorte) : all;
     const sortChips = sorten.length > 1 ? `<div class="chiplbl">🍇 Rebsorte</div><div class="chips">${['', ...sorten].map(v => `<button type="button" class="${(S.ui.wbSorte || '') === v ? 'on' : ''}" onclick="App.wbSorte('${esc(v)}')">${v ? esc(v) : 'Alle'}</button>`).join('')}</div>` : '';
     const ha = list.reduce((s, w) => s + (num(w.Flaeche_ha) || 0), 0);
+    const stand = (S.ui.wbAnsicht || 'stand') === 'stand';
+    const standChip = `<div class="chips" style="margin-bottom:4px"><button type="button" class="${stand ? 'on' : ''}" onclick="App.wbStandView()">📋 Stand – alles auf einen Blick</button></div>`;
+    if (stand) return `${runningBanner()}${archivBanner()}<div class="section-title"><h2>Weinberge</h2>${saisonBtn()}</div>${wsw}
+      ${sortChips}${standChip}<details class="more" style="margin:4px 0 10px"><summary>Einzelne Arbeit ansehen (Reihen-Fortschritt)</summary>${arbeitChips('', 'wbViewArbeit')}</details>${viewWBStand(list, ha)}
+      <button class="btn sec" style="margin-top:14px" onclick="App.wbEdit()">+ Weinberg anlegen</button>`;
     let tot = 0, cov = 0;
     const rows = list.map(w => {
       const c = coverage(w, A), f = frameFor(w, A), f0 = frame(w), len = f ? f.rows.reduce((s, r) => s + r.len, 0) : 0;
@@ -1308,14 +1320,63 @@ const App = (() => {
         <div class="right">${Math.round(c.pct)} %</div></button>`;
     }).join('');
     return `${runningBanner()}${archivBanner()}<div class="section-title"><h2>Weinberge</h2>${saisonBtn()}</div>${wsw}
-      ${sortChips}${arbeitChips(A, 'wbViewArbeit')}
+      ${sortChips}${standChip}${arbeitChips(A, 'wbViewArbeit')}
       <div class="prog" style="margin-top:0"><span>${esc(A)} · ${list.length} Weinberg${list.length === 1 ? '' : 'e'} · ${fmtHa(ha) || '0 ha'}</span><b>${tot ? Math.round(100 * cov / tot) : 0} %</b></div>
       <div class="card">${rows || '<div class="empty">Noch kein Weinberg angelegt.</div>'}</div>
       <button class="btn sec" style="margin-top:14px" onclick="App.wbEdit()">+ Weinberg anlegen</button>`;
   }
   function wbSorte(v){ S.ui.wbSorte = v; save(); render(); }
   function bookFilter(k){ S.ui.bookFilter = k; save(); render(); }
-  function wbViewArbeit(a){ wbUI.arbeit = a; render(); }
+  function wbViewArbeit(a){ wbUI.arbeit = a; S.ui.wbAnsicht = 'arbeit'; save(); render(); }
+  function wbStandView(){ S.ui.wbAnsicht = 'stand'; save(); render(); }
+  /* Stand je Weinberg: angefangene Arbeiten, fertige Arbeiten, letzte Spritzung */
+  const ARB_IDX = n => { const i = ARBEITEN.findIndex(x => x[0] === n); return i < 0 ? 99 : i; };
+  const tageSeit = d => Math.round((Date.parse(today() + 'T12:00:00') - Date.parse(String(d).slice(0, 10) + 'T12:00:00')) / 864e5);
+  function wbStand(w, sea){
+    const last = {};
+    S.snap.arbeiten.filter(a => a.Weinberg_ID === w.Weinberg_ID && inSaison(a.Datum, sea)).forEach(a => { const d = String(a.Datum).slice(0, 10); if (!last[a.Arbeit] || d > last[a.Arbeit]) last[a.Arbeit] = d; });
+    const items = Object.keys(last).filter(n => n !== 'Pflanzenschutz').map(n => ({ n, d: last[n], pct: coverage(w, n, sea).pct }));
+    const psRows = S.snap.ps.filter(r => r.Weinberg_ID === w.Weinberg_ID && inSaison(r.Datum, sea)).sort((a, b) => String(a.Datum).localeCompare(String(b.Datum)));
+    const psD = psRows.map(r => String(r.Datum).slice(0, 10)).concat(last.Pflanzenschutz ? [last.Pflanzenschutz] : []).sort().pop() || '';
+    const lastPs = psRows.filter(r => String(r.Datum).slice(0, 10) === psD), psAbst = lastPs.map(r => num(r.Abstand_Tage)).find(x => x) || null;
+    const psN = psD ? new Set(S.snap.ps.filter(r => r.Weinberg_ID === w.Weinberg_ID && inSaison(r.Datum, sea)).map(r => r.Spritzung_ID || r.Datum)).size : 0;
+    return { offen: items.filter(i => i.pct < 99.5).sort((a, b) => b.d.localeCompare(a.d)), fertig: items.filter(i => i.pct >= 99.5).sort((a, b) => ARB_IDX(a.n) - ARB_IDX(b.n)), psD, psN, psAbst };
+  }
+  function psChip(st, sea){
+    if (!st.psD) return '';
+    const t = tageSeit(st.psD), rest = st.psAbst ? st.psAbst - t : null;
+    const txt = sea.current ? (t === 0 ? 'heute' : t === 1 ? 'gestern' : `vor ${t} Tagen`) : fmtDate(st.psD);
+    // Farbe nur, wenn bei der Spritzung ein Abstand bis zur nächsten eingetragen wurde
+    const cls = !sea.current || rest == null || rest < -10 ? 'neu' : rest > 2 ? 'ok' : rest >= 0 ? 'mid' : 'late';
+    const due = sea.current && rest != null && rest >= -10 ? (rest > 0 ? ` · nächste in ${rest} T.` : rest === 0 ? ' · nächste heute fällig' : ` · nächste seit ${-rest} T. fällig`) : '';
+    return `<span class="st ${cls}">💧 ${st.psN > 1 ? st.psN + '. Spritzung ' : 'Gespritzt '}${txt}${due}</span>`;
+  }
+  function viewWBStand(list, ha){
+    const sea = selSaison(), stands = new Map(list.map(w => [w.Weinberg_ID, wbStand(w, sea)]));
+    // Zusammenfassung: welche Arbeiten sind gerade angefangen?
+    const arbs = [...new Set([...stands.values()].flatMap(s => s.offen.concat(s.fertig).map(i => i.n)))];
+    const sum = arbs.map(n => { let tot = 0, cov = 0, fertig = 0, mit = 0, d = '';
+      list.forEach(w => { const f = frameFor(w, n); if (!f) return; mit++; const len = f.rows.reduce((s, r) => s + r.len, 0), st = stands.get(w.Weinberg_ID), it = st.offen.concat(st.fertig).find(i => i.n === n);
+        const pct = it ? it.pct : 0; tot += len; cov += len * pct / 100; if (pct >= 99.5) fertig++; if (it && it.d > d) d = it.d; });
+      return { n, pct: tot ? 100 * cov / tot : 0, fertig, mit, d }; });
+    const lauf = sum.filter(x => x.pct < 99.5).sort((a, b) => b.d.localeCompare(a.d)), done = sum.filter(x => x.pct >= 99.5).sort((a, b) => ARB_IDX(a.n) - ARB_IDX(b.n));
+    const top = `<div class="prog" style="margin-top:0"><span>${list.length} Weinberg${list.length === 1 ? '' : 'e'} · ${fmtHa(ha) || '0 ha'}</span><b></b></div>
+      ${lauf.length ? `<div class="log-day">⏳ Angefangen</div><div class="card">${lauf.map(x => `<button class="lauf" onclick="App.wbViewArbeit('${esc(x.n)}')"><span class="swatch" style="background:${arbeitFarbe(x.n)}"></span>
+        <div class="main"><div class="title">${esc(x.n)}</div><div class="sub">${x.fertig} von ${x.mit} Weinbergen fertig · zuletzt ${fmtDate(x.d)}</div><div class="bar"><i style="width:${x.pct.toFixed(1)}%;background:${arbeitFarbe(x.n)}"></i></div></div><b class="p">${Math.round(x.pct)} %</b></button>`).join('')}</div>` : ''}
+      ${done.length ? `<p class="note" style="margin:8px 2px">✓ Überall fertig: ${done.map(x => esc(x.n)).join(', ')}</p>` : ''}
+      ${!lauf.length && !done.length ? `<p class="note" style="margin:8px 2px">In der ${esc(sea.label)} ist noch keine Arbeit eingetragen.</p>` : ''}`;
+    const rows = list.map(w => {
+      const st = stands.get(w.Weinberg_ID), f0 = frame(w), akt = st.offen[0];
+      const chips = st.offen.map(i => `<span class="st run" style="background:${arbeitFarbe(i.n)}">${esc(i.n)} ${Math.round(i.pct)} %</span>`).join('') + psChip(st, sea)
+        + st.fertig.map(i => `<span class="st done">✓ ${esc(i.n)}</span>`).join('');
+      return `<button class="wb-card" onclick="App.openWeinberg('${esc(w.Weinberg_ID)}')">
+        <div class="wb-mini">${wbSVG(w, akt ? { arbeit: akt.n } : {})}</div>
+        <div class="main" style="flex:1;min-width:0"><div class="title">${esc(w.Name)} ${aufgBadge(wbOffen(w.Weinberg_ID))}</div>
+        <div class="sub">${[esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f0 ? f0.rows.length + ' Reihen' : w.Status === 'unbestockt' ? '🌱 unbestockt' : 'noch keine Reihen'].filter(Boolean).join(' · ')}</div>
+        <div>${chips || '<span class="st none">noch nichts gemacht</span>'}</div>${wzBadge(w.Weinberg_ID)}</div></button>`;
+    }).join('');
+    return `${top}<div class="log-day">🍇 Weinberge</div><div class="card">${rows || '<div class="empty">Noch kein Weinberg angelegt.</div>'}</div>`;
+  }
 
   function viewWBBuch(){
     const F = S.ui.bookFilter || 'alle';
@@ -1890,6 +1951,7 @@ const App = (() => {
         <div class="two">${field('BBCH / Stadium', inTxt('bbch', v.bbch, 'z. B. 57'))}${field('Schaderreger', inTxt('schad', v.schad, 'z. B. Peronospora'))}</div>
         <div class="two">${field('Gerät', inTxt('geraet', v.geraet ?? S.ui.geraet, 'Sprühgerät'))}${field('Anwender', inTxt('anwender', v.anwender ?? S.name))}</div>
         <div class="two">${field('Datum', `<input name="datum" type="date" value="${esc(v.datum || today())}">`)}${field('Notiz', inTxt('notiz', v.notiz))}</div>
+        ${field('Nächste Spritzung in ca. … Tagen', inNum('abstand', v.abstand ?? (S.ui.abstand || null), 'z. B. 10 – leer lassen = keine Erinnerung', '1'), '(je nach Wetter und Mittel)')}
         ${d ? '' : gpsBox}
         <div class="two">${field('Beginn', `<input name="beginn" type="time" value="${esc(d ? d.beginn : (v.beginn || ''))}">`)}${field('Ende', `<input name="ende" type="time" value="${d ? nowTime() : ''}">`)}</div>
         ${d ? '<button class="btn" type="submit">Beenden & dokumentieren</button><button class="btn sec" type="button" onclick="App.psCancel()">Spritzung verwerfen</button>'
@@ -1949,13 +2011,13 @@ const App = (() => {
       c.mittel.forEach(({ m, a }, mi) => ps.push({ PS_ID: `${sid}-${wi}-${mi}`, Spritzung_ID: sid, Datum: datum, Beginn: `${datum}T${fd.beginn}`, Ende: fd.ende ? `${datum}T${fd.ende}` : '',
         Weinberg_ID: w.Weinberg_ID, Weinberg: w.Name, Flurstueck: [w.Gemarkung, w.Flur ? 'Flur ' + w.Flur : '', w.Flurstueck].filter(Boolean).join(' '), Flaeche_ha: +ha.toFixed(4),
         Kultur: KULTUR, Mittel: m.Mittel, Zulassungsnummer: m.Zulassungsnummer || '', Aufwand_je_ha: +(a * c.faktor).toFixed(4), Einheit: m.Einheit || '', Menge: +(a * c.faktor * ha).toFixed(4),
-        Faktor: c.faktor, Wasser_L_je_ha: c.wasser, Entwicklungsstadium: fd.bbch || '', Schaderreger: fd.schad || '', Anwender: fd.anwender || S.name || '', Geraet: fd.geraet || '', Notiz: fd.notiz || '', Erfasst_am: now }));
+        Faktor: c.faktor, Wasser_L_je_ha: c.wasser, Entwicklungsstadium: fd.bbch || '', Schaderreger: fd.schad || '', Anwender: fd.anwender || S.name || '', Geraet: fd.geraet || '', Notiz: fd.notiz || '', Abstand_Tage: num(fd.abstand), Erfasst_am: now }));
       const f = frame(w), gx = det.find(x => x.w.Weinberg_ID === w.Weinberg_ID);
       if (gx) review.push({ id: w.Weinberg_ID, arbeit: 'Pflanzenschutz', segs: gx.segs, sid: `${sid}-a${wi}`, datum, person: fd.anwender || S.name || '', notiz: c.mittel.map(x => x.m.Mittel).join(', ') });
       else if (f) arbeiten.push({ Arbeit_ID: `${sid}-a${wi}`, Datum: datum, Weinberg_ID: w.Weinberg_ID, Weinberg: w.Name, Arbeit: 'Pflanzenschutz', Anteil_Prozent: 100,
         Reihen: JSON.stringify(seitenFrame(f).rows.map((r, i) => [i, 0, 1])), Person: fd.anwender || S.name || '', Notiz: c.mittel.map(x => x.m.Mittel).join(', '), Erfasst_am: now });
     });
-    S.ui.wasser = c.wasser; S.ui.tank = c.tank; S.ui.geraet = fd.geraet; trkStop(); delete S.ui.psDraft;
+    S.ui.wasser = c.wasser; S.ui.tank = c.tank; S.ui.geraet = fd.geraet; if (num(fd.abstand)) S.ui.abstand = num(fd.abstand); trkStop(); delete S.ui.psDraft;
     S.ui.psReview = (S.ui.psReview || []).concat(review);
     queueOp({ id: sid, ps, arbeiten }, 'Spritzung dokumentiert');
     closeSheet(); tab = 'ps'; render();
@@ -2935,7 +2997,7 @@ const App = (() => {
   }
 
   return { init, go, wbMapMe, wbMapFit, kEcken, kCutStart, kCutPick, restNeu, wbTab, wbAufgForm, wbAufgGps, wbAufgSave, wbAufgDone, fassView, planTap, planSide, planStart, planCancel, planDoor, planSave, pdfShare, openArtikel, artikelForm, artikelSave, artikelAus, flBuchen, flSave, bestForm, bestKunde, bestCalc, bestSave, openBest, bestAbgeholt, bestBezahlt, bestStorno,
-    openKunde, kundeForm, kundeSave, kSuche, verkaufNew, schnellVerkauf, leseForm, leseCheck, leseSave, printMenu, printRun, printLager: () => printLager(), printBest, printKunde, aufgForm, aufgSave, aufgDone, aufgEintragen, saisonPick, setSaison, wbSorte, handPick, jobManual, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
+    openKunde, kundeForm, kundeSave, kSuche, verkaufNew, schnellVerkauf, leseForm, leseCheck, leseSave, printMenu, printRun, printLager: () => printLager(), printBest, printKunde, aufgForm, aufgSave, aufgDone, aufgEintragen, saisonPick, setSaison, wbSorte, handPick, jobManual, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, wbStandView, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
 })();
 App.init();
 </script>
