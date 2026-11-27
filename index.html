@@ -322,8 +322,14 @@ const App = (() => {
     try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.snap) return s; } catch(e){}
     return { snap: JSON.parse(JSON.stringify(DEMO)), queue: [], settings: {}, demo: true, ui: {} };
   }
+  /* Weinnummern vereinheitlichen: 26_05, 26/05, 26.05 → 26-05 (in der Tabelle von Hand anders getippt) */
+  const normWnr = v => { const t = String(v == null ? '' : v).trim(); const m = t.match(/^(\d{2})\s*[_\/.\s]\s*(\d{1,3})$/); return m ? `${m[1]}-${m[2].padStart(2, '0')}` : t; };
   function ensure(){
     S.ui = S.ui || {};
+    if (S.snap) {
+      (S.snap.behaelter || []).forEach(f => { if (f.Aktuelle_Weinnummer) f.Aktuelle_Weinnummer = normWnr(f.Aktuelle_Weinnummer); });
+      ['partien', 'register', 'aufgaben', 'lesegut', 'artikel', 'flaschen'].forEach(k => (S.snap[k] || []).forEach(r => { if (r.Weinnummer) r.Weinnummer = normWnr(r.Weinnummer); }));
+    }
     ['behaelter','partien','stoffe','register','weinberge','arbeiten','mittel','ps','aufgaben','flaschen','artikel','kunden','bestellungen','lesegut'].forEach(k => { if (!Array.isArray(S.snap[k])) S.snap[k] = []; });
     if (S.demo && !S.snap.weinberge.length) demoWeinberge();
     if (S.demo && !S.snap.artikel.length && !S.ui.demoVk) { S.ui.demoVk = 1;
