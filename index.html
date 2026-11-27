@@ -239,6 +239,24 @@ textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px
   .lq{width:44mm;height:44mm;flex:none}.lq svg{width:100%;height:100%}
   .ln{font-size:34pt;font-weight:800;line-height:1}.ld{font-size:10pt;margin-top:3px}.lb{font-size:8pt;color:#555;margin-top:6mm}
 }
+.wcard{background:#fff;border:1px solid var(--line);border-left:6px solid;border-radius:14px;padding:10px 12px;margin-bottom:10px}
+.wtop{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;gap:10px}.wtop b{font-size:17px;white-space:nowrap}
+.fchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.fchip{border-radius:10px;padding:7px 10px;font-size:13.5px}
+.leerchip{border:1.5px dashed #C9BBA8;color:var(--muted);background:transparent}
+.plan{background:#EDE4D6;border-radius:18px;padding:10px 8px;border:2px solid #CDBFAA}
+.pcols{display:grid;grid-template-columns:1fr 34px 1fr;gap:4px}
+.pcol{display:flex;flex-direction:column;gap:6px;align-items:center}
+.paisle{background:repeating-linear-gradient(180deg,#E3D8C6 0 14px,#EDE4D6 14px 28px);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.paisle span{writing-mode:vertical-rl;font-size:11px;color:#9A8B7C;letter-spacing:2px}
+.ptile{display:flex;flex-direction:column;align-items:center;gap:2px;padding:2px;border-radius:14px;width:100%}
+.pcirc{border-radius:50%;display:grid;place-items:center;border:2px solid rgba(0,0,0,.12);background:#fff;flex:none}
+.pleer .pcirc{background:#F7F2EA;border:2px dashed #C9BBA8}
+.pin{display:flex;flex-direction:column;align-items:center;line-height:1.1;font-size:13px;color:var(--ink);background:rgba(255,255,255,.0)}.pin small{font-size:11px}
+.plab{font-size:11.5px;color:#5E4B42;text-align:center;line-height:1.2;max-width:100%}.pleer .plab{color:#A99C92}
+.psel{background:#FFF3C4;outline:2px solid #E0A800}
+.pdoor{text-align:center;font-size:12px;color:#7A6A61;padding:4px}
+.pmove{font-size:12px;color:#7A6A61;border:1.5px dashed #C9BBA8;border-radius:10px;padding:8px;width:100%}
+.pleg-wrap{display:flex;flex-wrap:wrap;gap:6px 12px;margin:0 2px 10px;font-size:12.5px;color:#5E4B42}.pleg i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:4px;vertical-align:-1px}
 </style>
 </head>
 <body>
@@ -430,19 +448,94 @@ const App = (() => {
   function setMode(m){ mode = m; S.ui.mode = m; save(); tab = m === 'weinberg' ? 'wb' : m === 'verkauf' ? 'lager' : 'faesser'; closeSheet(); render(); window.scrollTo(0,0); }
   function fab(){ return mode === 'weinberg' ? wbNewEntry() : mode === 'verkauf' ? verkaufNew() : newEntry(); }
 
+  /* ---------- Fassübersicht: Kellerplan (Draufsicht) & nach Wein ---------- */
+  const WEIN_PAL = { 'Rosé': ['#E8A0B4', '#C2577A', '#F3C9D4', '#A33A5E'], 'Weiß': ['#E9C85A', '#C79A1F', '#F2DD95', '#A8851A'], 'Rot': ['#8E2A3E', '#B54A5E', '#5E1424', '#C96F80'] };
+  function weinFarbe(wnr){
+    const p = wein(wnr); if (!p) return { bg: '#D9CFC2', fg: '#4A3F38' };
+    let fa = p.Farbe; if (!WEIN_PAL[fa]) fa = /ros[eé]/i.test(p.Bezeichnung) ? 'Rosé' : /burgunder|dornfelder|rot|regent|portugieser|merlot|cabernet/i.test(p.Bezeichnung) ? 'Rot' : 'Weiß';
+    const same = S.snap.partien.filter(x => (x.Farbe || (/ros[eé]/i.test(x.Bezeichnung) ? 'Rosé' : '')) === fa || x.Farbe === fa).map(x => x.Weinnummer).sort();
+    const i = Math.max(0, same.indexOf(wnr)) % WEIN_PAL[fa].length, bg = WEIN_PAL[fa][i];
+    const dark = fa === 'Rot' ? i !== 3 : i === 1 || i === 3;
+    return { bg, fg: dark ? '#FFFFFF' : '#3A2A22' };
+  }
+  const kurzName = wnr => String(weinName(wnr)).replace(/\s*20\d\d\s*/g, ' ').replace(/Sauvignon Blanc/i, 'Sauv. Blanc').replace(/Dornfelder /i, '').trim();
+  function platzVon(f, i){ const m = String(f.Platz || '').match(/^([LR])\s*(\d+)/i); if (m) return { s: m[1].toUpperCase(), n: +m[2] };
+    const nr = +String(f.Behaelter_Nr).replace(/\D/g, '') || i + 1; return nr <= 7 ? { s: 'L', n: nr } : { s: 'R', n: nr - 7 }; }
+  let planEdit = null; // { sel, L:[nr], R:[nr] }
+  function planSeiten(){
+    if (planEdit) return planEdit;
+    const list = [...S.snap.behaelter].sort((a, b) => a.Behaelter_Nr.localeCompare(b.Behaelter_Nr, 'de', { numeric: true }));
+    const L = [], R = [];
+    list.map((f, i) => ({ f, p: platzVon(f, i) })).sort((a, b) => a.p.n - b.p.n).forEach(x => (x.p.s === 'L' ? L : R).push(x.f.Behaelter_Nr));
+    return { L, R };
+  }
   function viewFaesser(){
-    const list = [...S.snap.behaelter].sort((a,b) => a.Behaelter_Nr.localeCompare(b.Behaelter_Nr, 'de', {numeric:true}));
+    const list = [...S.snap.behaelter];
     const voll = list.filter(f => f.Aktuelle_Weinnummer), leer = list.filter(f => !f.Aktuelle_Weinnummer);
-    const total = voll.reduce((s,f)=> s + (num(f.Fuellstand_L)||0), 0);
-    const card = f => {
-      const w = wein(f.Aktuelle_Weinnummer);
-      return `<button class="fass ${w?'':'leer'}" onclick="App.openFass('${esc(f.Behaelter_Nr)}')">
-        ${fassSVG(f)}<div class="t"><div class="nr">${esc(f.Behaelter_Nr)}${f.Bezeichnung && f.Bezeichnung !== 'Fass '+(+f.Behaelter_Nr.replace(/\D/g,''))?' · '+esc(f.Bezeichnung):''}</div>
-        <div class="wein">${w ? esc(w.Bezeichnung) : 'leer'}</div>
-        <div class="menge">${w ? fmtL(num(f.Fuellstand_L)) + ' / ' : ''}${fmtL(num(f.Fassungsvermoegen_L))}</div></div></button>`;
+    const total = voll.reduce((s, f) => s + (num(f.Fuellstand_L) || 0), 0);
+    const v = S.ui.fassView || 'plan';
+    const sw = `<div class="mapctl" style="margin-bottom:12px">${[['plan', 'Kellerplan'], ['wein', 'Nach Wein']].map(([k, t]) => `<button type="button" class="${v === k ? 'on' : ''}" onclick="App.fassView('${k}')">${t}</button>`).join('')}</div>`;
+    return `<div class="section-title"><h2>Im Keller</h2><small>${voll.length} belegt · ${leer.length} leer · ${fmtL(total)}</small></div>${sw}`
+      + (!list.length ? '<div class="empty">Noch keine Fässer angelegt.</div>' : v === 'wein' ? viewNachWein(voll, leer) : viewPlan());
+  }
+  function fassView(v){ S.ui.fassView = v; save(); render(); }
+  function viewNachWein(voll, leer){
+    const byW = new Map(); voll.forEach(f => { const k = f.Aktuelle_Weinnummer; if (!byW.has(k)) byW.set(k, []); byW.get(k).push(f); });
+    const cards = [...byW.entries()].sort((a, b) => String(weinName(a[0])).localeCompare(String(weinName(b[0])), 'de')).map(([wnr, fs]) => {
+      const c = weinFarbe(wnr), sum = fs.reduce((s, f) => s + (num(f.Fuellstand_L) || 0), 0), offen = offeneAufg(wnr).length;
+      fs.sort((a, b) => a.Behaelter_Nr.localeCompare(b.Behaelter_Nr, 'de', { numeric: true }));
+      return `<div class="wcard" style="border-left-color:${c.bg}"><button class="wtop" onclick="App.openWein('${esc(wnr)}')"><div><div class="title">${esc(weinName(wnr))}</div>
+        <div class="sub">${esc(wnr)} · ${fs.length === 1 ? '1 Fass' : fs.length + ' Fässer'}${offen ? ` · <span style="color:#8A5A10">📝 ${offen} offen</span>` : ''}</div></div><b>${fmtL(sum)}</b></button>
+        <div class="fchips">${fs.map(f => `<button class="fchip" style="background:${c.bg};color:${c.fg}" onclick="App.openFass('${esc(f.Behaelter_Nr)}')"><b>${esc(f.Behaelter_Nr)}</b> ${fmtNum(num(f.Fuellstand_L), 0)} / ${fmtNum(num(f.Fassungsvermoegen_L), 0)} L</button>`).join('')}</div></div>`;
+    }).join('');
+    leer.sort((a, b) => a.Behaelter_Nr.localeCompare(b.Behaelter_Nr, 'de', { numeric: true }));
+    return cards + (leer.length ? `<div class="log-day" style="margin-top:16px">${leer.length} leere Fässer</div><div class="fchips">${leer.map(f => `<button class="fchip leerchip" onclick="App.openFass('${esc(f.Behaelter_Nr)}')"><b>${esc(f.Behaelter_Nr)}</b> ${fmtNum(num(f.Fassungsvermoegen_L), 0)} L</button>`).join('')}</div>` : '');
+  }
+  function viewPlan(){
+    const { L, R } = planSeiten(), ed = !!planEdit, maxCap = Math.max(...S.snap.behaelter.map(f => num(f.Fassungsvermoegen_L) || 0), 1);
+    const eingangOben = !!S.ui.eingangOben;
+    const tile = nr => {
+      const f = fass(nr); if (!f) return '';
+      const cap = num(f.Fassungsvermoegen_L) || 0, size = Math.round(48 + 26 * Math.sqrt(cap / maxCap));
+      const w = f.Aktuelle_Weinnummer, c = w ? weinFarbe(w) : null, pct = w && cap ? Math.min(1, (num(f.Fuellstand_L) || 0) / cap) : 0;
+      const sel = ed && planEdit.sel === nr;
+      return `<button class="ptile ${w ? '' : 'pleer'} ${sel ? 'psel' : ''}" onclick="App.planTap('${esc(nr)}')">
+        <span class="pcirc" style="width:${size}px;height:${size}px;${w ? `background:conic-gradient(${c.bg} ${pct * 360}deg, ${c.bg}55 0)` : ''}"><span class="pin" style="${w ? `color:${c.fg}` : ''}"><b>${esc(f.Behaelter_Nr)}</b>${w ? `<small>${fmtNum(num(f.Fuellstand_L), 0)}</small>` : ''}</span></span>
+        <span class="plab">${w ? esc(kurzName(w)) : `leer · ${fmtNum(cap, 0)} L`}</span></button>`;
     };
-    return `<div class="section-title"><h2>Im Keller</h2><small>${voll.length} belegt · ${leer.length} leer · ${fmtL(total)}</small></div>
-      <div class="grid">${list.map(card).join('') || '<div class="empty">Noch keine Fässer angelegt.</div>'}</div>`;
+    const door = t => `<div class="pdoor">🚪 ${t}</div>`;
+    const leg = [...new Set(S.snap.behaelter.filter(f => f.Aktuelle_Weinnummer).map(f => f.Aktuelle_Weinnummer))].map(w => { const c = weinFarbe(w); return `<span class="pleg"><i style="background:${c.bg}"></i>${esc(kurzName(w))}</span>`; }).join('');
+    return `${leg ? `<div class="pleg-wrap">${leg}</div>` : ''}
+      ${ed ? `<p class="note archnote">✏️ Anordnen: Tippe ein Fass an und dann das Fass, mit dem es den Platz tauschen soll. Mit den Pfeilen schiebst du das gewählte Fass auf die andere Seite.</p>` : ''}
+      <div class="plan">${eingangOben ? door('Eingang') : ''}
+        <div class="pcols"><div class="pcol">${L.map(tile).join('')}${ed ? `<button class="pmove" onclick="App.planSide('L')">← hierher</button>` : ''}</div>
+          <div class="paisle"><span>Gang</span></div>
+          <div class="pcol">${R.map(tile).join('')}${ed ? `<button class="pmove" onclick="App.planSide('R')">hierher →</button>` : ''}</div></div>
+        ${eingangOben ? '' : door('Eingang')}</div>
+      <div class="btnrow" style="margin-top:12px">${ed ? `<button class="btn small" onclick="App.planSave()">✓ Fertig</button><button class="btn sec small" onclick="App.planCancel()">Abbrechen</button>`
+        : `<button class="btn sec small" onclick="App.planStart()">✏️ Fässer anordnen</button><button class="btn sec small" onclick="App.planDoor()">🚪 Eingang ${eingangOben ? 'unten' : 'oben'}</button>`}</div>`;
+  }
+  function planTap(nr){
+    if (!planEdit) return openFass(nr);
+    if (!planEdit.sel) { planEdit.sel = nr; return render(); }
+    if (planEdit.sel === nr) { planEdit.sel = null; return render(); }
+    const a = planEdit.sel, pos = x => planEdit.L.includes(x) ? ['L', planEdit.L.indexOf(x)] : ['R', planEdit.R.indexOf(x)];
+    const [sa, ia] = pos(a), [sb, ib] = pos(nr);
+    planEdit[sa][ia] = nr; planEdit[sb][ib] = a; planEdit.sel = null; render();
+  }
+  function planSide(side){
+    if (!planEdit || !planEdit.sel) return toast('Erst ein Fass antippen');
+    const nr = planEdit.sel; planEdit.L = planEdit.L.filter(x => x !== nr); planEdit.R = planEdit.R.filter(x => x !== nr);
+    planEdit[side].push(nr); planEdit.sel = null; render();
+  }
+  function planStart(){ const s = planSeiten(); planEdit = { sel: null, L: [...s.L], R: [...s.R] }; render(); }
+  function planCancel(){ planEdit = null; render(); }
+  function planDoor(){ S.ui.eingangOben = !S.ui.eingangOben; save(); render(); }
+  function planSave(){
+    const upd = [];
+    ['L', 'R'].forEach(s => planEdit[s].forEach((nr, i) => { const p = s + String(i + 1).padStart(2, '0'), f = fass(nr); if (f && f.Platz !== p) upd.push({ Behaelter_Nr: nr, Platz: p }); }));
+    planEdit = null;
+    if (upd.length) queueOp({ fass: upd }, 'Anordnung gespeichert'); else render();
   }
 
   function viewWeine(){
@@ -2590,7 +2683,7 @@ const App = (() => {
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 
-  return { init, go, pdfShare, openArtikel, artikelForm, artikelSave, artikelAus, flBuchen, flSave, bestForm, bestKunde, bestCalc, bestSave, openBest, bestAbgeholt, bestBezahlt, bestStorno,
+  return { init, go, fassView, planTap, planSide, planStart, planCancel, planDoor, planSave, pdfShare, openArtikel, artikelForm, artikelSave, artikelAus, flBuchen, flSave, bestForm, bestKunde, bestCalc, bestSave, openBest, bestAbgeholt, bestBezahlt, bestStorno,
     openKunde, kundeForm, kundeSave, kSuche, verkaufNew, schnellVerkauf, leseForm, leseCheck, leseSave, printMenu, printRun, printLager: () => printLager(), printBest, printKunde, aufgForm, aufgSave, aufgDone, aufgEintragen, saisonPick, setSaison, wbSorte, handPick, jobManual, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
 })();
 App.init();
