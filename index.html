@@ -211,11 +211,39 @@ body.athome main{padding-bottom:30px}
 .tick:active{background:#2F7D5B;border-color:#2F7D5B}
 .todobadge{margin-top:6px;font-size:12.5px;color:#8A5A10;background:#FBEFD5;border-radius:8px;padding:3px 8px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font:inherit;font-size:16px;background:#fff;resize:vertical}
+.homecard.verkauf{background:linear-gradient(135deg,#8A5A2B,#4E3318)}
+.mode button{font-size:15px;padding:6px 6px}
+@media (max-width:440px){#syncText{display:none}.pill{padding:8px}.mode{max-width:none}}
+.startcard.lese{background:#F6ECF0}
+.wz{display:inline-block;margin-top:6px;font-size:12.5px;color:#8A3A1A;background:#F9E3D8;border-radius:8px;padding:3px 8px}
+.chip.st-offen{background:#FBEFD5;color:#8A5A10}.chip.st-abgeholt{background:#F9E3D8;color:#8A3A1A}.chip.st-bezahlt{background:#E3EEF8;color:#2A5A8A}
+.chip.st-erledigt{background:#E2F0E6;color:#2F7D5B}.chip.st-storniert{background:#EEE;color:#888;text-decoration:line-through}
+.posrow{align-items:center}.qty{width:74px;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:17px;text-align:center}
+.search{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;font-size:16px;margin-bottom:12px;background:#fff}
+#printArea{display:none}
+@media print{
+  @page{size:A4;margin:12mm}
+  body>*:not(#printArea){display:none!important}
+  body{background:#fff!important;padding:0!important}
+  #printArea{display:block;font-family:-apple-system,Helvetica,Arial,sans-serif;color:#000;font-size:9.5pt}
+  .ph{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1.5pt solid #000;padding-bottom:6px;margin-bottom:10px}
+  .ph h1{font-size:16pt;margin:0}.psub{font-size:9pt;color:#333;margin-top:2px}.pb{text-align:right;font-size:10pt;font-weight:600}.pb small{font-weight:400;color:#555}
+  #printArea h2{font-size:11.5pt;margin:14px 0 6px}
+  .pt{width:100%;border-collapse:collapse}.pt th,.pt td{border:.5pt solid #888;padding:3px 4px;text-align:left;vertical-align:top}
+  .pt th{background:#eee;font-weight:600}.pt tfoot td{font-weight:700;border-top:1.2pt solid #000}.pt tr{page-break-inside:avoid}.pt thead{display:table-header-group}
+  .pt small{color:#555}
+  .pkv{border-collapse:collapse;margin-bottom:10px}.pkv th{text-align:left;padding:2px 14px 2px 0;font-weight:600}.pkv td{padding:2px 0}
+  .paddr{margin:4px 0 14px;font-size:11pt}.pnote{margin-top:10px}.psign{margin-top:36px;width:60%}.psign .line{border-bottom:.8pt solid #000;height:28px}
+  .labs{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .lab{height:64mm;border:.5pt dashed #999;display:flex;align-items:center;gap:5mm;padding:4mm;page-break-inside:avoid;box-sizing:border-box}
+  .lq{width:44mm;height:44mm;flex:none}.lq svg{width:100%;height:100%}
+  .ln{font-size:34pt;font-weight:800;line-height:1}.ld{font-size:10pt;margin-top:3px}.lb{font-size:8pt;color:#555;margin-top:6mm}
+}
 </style>
 </head>
 <body>
 <header class="top">
-  <button class="homebtn" onclick="App.go('home')" aria-label="Start"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg></button><div class="mode" id="modeSw"><button data-mode="keller" onclick="App.setMode('keller')">Keller</button><button data-mode="weinberg" onclick="App.setMode('weinberg')">Weinberg</button></div><span style="flex:1"></span>
+  <button class="homebtn" onclick="App.go('home')" aria-label="Start"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg></button><div class="mode" id="modeSw"><button data-mode="keller" onclick="App.setMode('keller')">Keller</button><button data-mode="weinberg" onclick="App.setMode('weinberg')">Weinberg</button><button data-mode="verkauf" onclick="App.setMode('verkauf')">Verkauf</button></div><span style="flex:1"></span>
   <button class="pill" id="syncPill" onclick="App.syncNow(true)"><span class="dot"></span><span id="syncText">…</span></button>
   <button class="icon-btn" aria-label="Einstellungen" onclick="App.openSettings()">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
@@ -229,6 +257,7 @@ textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px
 <div class="backdrop" id="backdrop" onclick="App.closeSheet()"></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="grab"></div><div id="sheetBody"></div></div>
 <div class="toast" id="toast"></div>
+<div id="printArea"></div>
 
 <script>
 /* ============================================================
@@ -295,8 +324,13 @@ const App = (() => {
   }
   function ensure(){
     S.ui = S.ui || {};
-    ['behaelter','partien','stoffe','register','weinberge','arbeiten','mittel','ps','aufgaben'].forEach(k => { if (!Array.isArray(S.snap[k])) S.snap[k] = []; });
+    ['behaelter','partien','stoffe','register','weinberge','arbeiten','mittel','ps','aufgaben','flaschen','artikel','kunden','bestellungen','lesegut'].forEach(k => { if (!Array.isArray(S.snap[k])) S.snap[k] = []; });
     if (S.demo && !S.snap.weinberge.length) demoWeinberge();
+    if (S.demo && !S.snap.artikel.length && !S.ui.demoVk) { S.ui.demoVk = 1;
+      S.snap.artikel.push({ Artikel_ID: 'A-demo1', Name: '2025 Riesling trocken 1,0 l', Groesse_L: 1, Preis: 6.5, Aktiv: 'ja' }, { Artikel_ID: 'A-demo2', Name: '2025 Dornfelder Rosé 0,75 l', Groesse_L: 0.75, Preis: 7.9, Aktiv: 'ja' });
+      S.snap.flaschen.push({ Bewegung_ID: 'f-d1', Datum: today(), Artikel_ID: 'A-demo1', Artikel: '2025 Riesling trocken 1,0 l', Groesse_L: 1, Anzahl: 240, Art: 'Anfangsbestand' }, { Bewegung_ID: 'f-d2', Datum: today(), Artikel_ID: 'A-demo2', Artikel: '2025 Dornfelder Rosé 0,75 l', Groesse_L: 0.75, Anzahl: 180, Art: 'Anfangsbestand' });
+      S.snap.kunden.push({ Kunde_ID: 'K-demo1', Name: 'Erika Beispiel', Telefon: '0123 456789' });
+      S.snap.bestellungen.push({ Bestellung_ID: 'B-demo1', Datum: today(), Kunde_ID: 'K-demo1', Kunde: 'Erika Beispiel', Positionen: JSON.stringify([{ a: 'A-demo1', n: 12, p: 6.5, name: '2025 Riesling trocken 1,0 l' }]), Summe: 78, Abholung_geplant: '' }); }
     if (S.demo && !S.snap.aufgaben.length && !S.ui.demoAufg) { S.ui.demoAufg = 1; const d = S.snap.partien.find(p => /Dornfelder/.test(p.Bezeichnung)) || S.snap.partien[0];
       if (d) S.snap.aufgaben.push({ Aufgabe_ID: 'demo-t1', Weinnummer: d.Weinnummer, Text: 'Bentonit geben', Quelle: 'Weinlabor', Faellig: '', Erstellt_am: new Date().toISOString(), Erstellt_von: 'Demo' }); }
   }
@@ -364,10 +398,14 @@ const App = (() => {
     mehr:'<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
     wb:'<path d="M3 20c3-6 6-9 9-9s6 3 9 9"/><path d="M6 20c2-4 4-6 6-6s4 2 6 6M12 11V4m0 0c2 0 3 1 3 3"/>',
     wbbuch:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M9 9l2 2 4-4"/>',
+    lager:'<path d="M9 3h6v4l1 2v12H8V9l1-2z"/><path d="M8 13h8"/>',
+    best:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+    kunden:'<circle cx="12" cy="8" r="3.5"/><path d="M5 21c1-4 4-6 7-6s6 2 7 6"/>',
     ps:'<circle cx="7" cy="17" r="3"/><circle cx="17.5" cy="16.5" r="3.5"/><path d="M10 17h4M4 14V9h6l2 5M12 9h3l1 4"/><path d="M6 9V6h3"/>'
   };
   const NAV = { keller: [['faesser','Fässer'],['weine','Weine'],null,['buch','Kellerbuch'],['mehr','Mehr']],
-                weinberg: [['wb','Weinberge'],['wbbuch','Tagebuch'],null,['ps','Arbeiten'],['mehr','Mehr']] };
+                weinberg: [['wb','Weinberge'],['wbbuch','Tagebuch'],null,['ps','Arbeiten'],['mehr','Mehr']],
+                verkauf: [['lager','Lager'],['best','Bestellungen'],null,['kunden','Kunden'],['mehr','Mehr']] };
   function renderNav(){
     $('#nav').hidden = tab === 'home'; document.body.classList.toggle('athome', tab === 'home');
     $('#nav').innerHTML = NAV[mode].map(n => n ? `<button data-tab="${n[0]}" class="${n[0]===tab?'on':''}" onclick="App.go('${n[0]}')"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[n[0]]}</svg>${n[1]}</button>`
@@ -378,13 +416,13 @@ const App = (() => {
     renderNav();
     $('#demoBanner').hidden = !S.demo;
     const v = $('#view');
-    const V = { home: viewHome, faesser: viewFaesser, weine: viewWeine, buch: viewBuch, mehr: viewMehr, wb: viewWB, wbbuch: viewWBBuch, ps: viewPS };
+    const V = { home: viewHome, faesser: viewFaesser, weine: viewWeine, buch: viewBuch, mehr: viewMehr, wb: viewWB, wbbuch: viewWBBuch, ps: viewPS, lager: viewLager, best: viewBest, kunden: viewKunden };
     try { v.innerHTML = (V[tab] || viewFaesser)(); }
     catch (e) { console.error(e); v.innerHTML = `<div class="empty">Hier ist ein Fehler aufgetreten:<br><small>${esc(e.message)}</small><br><br><button class="btn sec" onclick="App.go('home')">Zur Startseite</button></div>`; }
     renderSync();
   }
-  function setMode(m){ mode = m; S.ui.mode = m; save(); tab = m === 'weinberg' ? 'wb' : 'faesser'; closeSheet(); render(); window.scrollTo(0,0); }
-  function fab(){ return mode === 'weinberg' ? wbNewEntry() : newEntry(); }
+  function setMode(m){ mode = m; S.ui.mode = m; save(); tab = m === 'weinberg' ? 'wb' : m === 'verkauf' ? 'lager' : 'faesser'; closeSheet(); render(); window.scrollTo(0,0); }
+  function fab(){ return mode === 'weinberg' ? wbNewEntry() : mode === 'verkauf' ? verkaufNew() : newEntry(); }
 
   function viewFaesser(){
     const list = [...S.snap.behaelter].sort((a,b) => a.Behaelter_Nr.localeCompare(b.Behaelter_Nr, 'de', {numeric:true}));
@@ -451,13 +489,14 @@ const App = (() => {
     return html + '</div>';
   }
   function viewBuch(){
-    return `<div class="section-title"><h2>Kellerbuch</h2><small>${S.snap.register.length} Einträge</small></div>` + logRows(S.snap.register);
+    return `<div class="section-title"><h2>Kellerbuch</h2><button class="saisonbtn" onclick="App.printMenu()">🖨️ Drucken</button></div>` + logRows(S.snap.register);
   }
 
   function viewMehr(){
     const offen = S.queue.length;
     return `<div class="section-title"><h2>Mehr</h2></div>
       <div class="card">
+        <button class="row" onclick="App.printMenu()"><div class="main"><div class="title">🖨️ Drucken / PDF</div><div class="sub">Kellerbuch, Pflanzenschutz, Tagebuch, Lese, Lager, Fass-Etiketten …</div></div></button>
         <button class="row" onclick="App.form('stoffkauf')"><div class="main"><div class="title">Zusatzstoff eingekauft</div><div class="sub">Zucker, Säure, Schwefel … mit Lieferant (Stoffkonto)</div></div></button>
         <button class="row" onclick="App.openSettings()"><div class="main"><div class="title">Einstellungen & Verbindung</div><div class="sub">${S.settings.url ? 'Verbunden mit Google-Tabelle' : 'Noch nicht verbunden'}</div></div></button>
         <button class="row" onclick="App.exportJSON()"><div class="main"><div class="title">Sicherung herunterladen</div><div class="sub">Alle Daten auf diesem Gerät als Datei</div></div></button>
@@ -499,6 +538,7 @@ const App = (() => {
       ${Math.abs(bestand(wnr) - inhalt(wnr)) > 0.5 && hist.length ? `<p class="note">Kellerbuch (${fmtL(bestand(wnr))}) und Füllstände (${fmtL(inhalt(wnr))}) weichen ab – fehlt ein Eintrag (z. B. Zugang oder Schwund)?</p>`:''}
       ${fs.length ? `<div class="actions" style="grid-template-columns:repeat(2,1fr)">${fs.map(f=>`<button class="act" onclick="App.openFass('${f.Behaelter_Nr}')"><span class="ico">🛢️</span>${f.Behaelter_Nr}</button>`).join('')}</div>`:''}
       ${aufgBlock(wnr)}
+      <button class="btn sec small" style="margin-top:8px" onclick="App.printRun('weinkonto','${esc(wnr)}')">🖨️ Weinkonto drucken</button>
       <div class="log-day" style="margin-top:16px">Verlauf</div>${logRows(hist).replace(/<div class="log-day">[^<]*<\/div>/g,'')}`);
   }
 
@@ -759,8 +799,12 @@ const App = (() => {
         need(w, 'In diesem Fass liegt kein Wein.');
         const n = need(num(fd.Flaschen_Anzahl), 'Bitte die Anzahl Flaschen eintragen.'), g = num(fd.Nennfuellmenge_L);
         const ab = Math.round(n * g * 10) / 10;
+        const aid = artId(w.Weinnummer, g), art = artikel(aid);
+        const aname = art ? art.Name : `${w.Jahrgang || ''} ${w.Bezeichnung.replace(/\s*20\d\d\s*/, ' ').trim()} ${fmtG(g)}`.trim();
         return { register: reg({ Vorgangsart: 'Abfüllung', Flaschen_Anzahl: n, Nennfuellmenge_L: g, Abgang_L: ab, Lohnabfueller: fd.Lohnabfueller, Notiz: fd.Notiz }),
-                 fass: [setLvl(fnr, lvl - ab)] };
+                 fass: [setLvl(fnr, lvl - ab)],
+                 artikel: art ? undefined : { Artikel_ID: aid, Name: aname, Weinnummer: w.Weinnummer, Groesse_L: g, Preis: null, Aktiv: 'ja' },
+                 flaschen: [{ Bewegung_ID: uid(), Datum: base.Datum, Artikel_ID: aid, Artikel: aname, Weinnummer: w.Weinnummer, Groesse_L: g, Anzahl: n, Art: 'Abfüllung', Notiz: fd.Notiz || '', Erfasst_am: base.Erfasst_am, Erfasst_von: base.Erfasst_von }] };
       }
       case 'befuellen': {
         need(f, 'Bitte ein Fass wählen.');
@@ -796,6 +840,11 @@ const App = (() => {
     if (op.weinberg) upsert(S.snap.weinberge, 'Weinberg_ID', op.weinberg);
     if (op.mittel) upsert(S.snap.mittel, 'Mittel', op.mittel);
     if (op.aufgabe) upsert(S.snap.aufgaben, 'Aufgabe_ID', op.aufgabe);
+    if (op.artikel) upsert(S.snap.artikel, 'Artikel_ID', op.artikel);
+    if (op.kunde) upsert(S.snap.kunden, 'Kunde_ID', op.kunde);
+    if (op.bestellung) upsert(S.snap.bestellungen, 'Bestellung_ID', op.bestellung);
+    (op.flaschen || []).forEach(a => { if (!S.snap.flaschen.some(x => x.Bewegung_ID === a.Bewegung_ID)) S.snap.flaschen.push(Object.assign({ _pending: true }, a)); });
+    (op.lese || []).forEach(a => { if (!S.snap.lesegut.some(x => x.Lese_ID === a.Lese_ID)) S.snap.lesegut.push(Object.assign({ _pending: true }, a)); });
     if (op.del_arbeit) S.snap.arbeiten = S.snap.arbeiten.filter(x => x.Arbeit_ID !== op.del_arbeit);
     (op.arbeiten || []).forEach(a => { if (!S.snap.arbeiten.some(x => x.Arbeit_ID === a.Arbeit_ID)) S.snap.arbeiten.push(Object.assign({ _pending: true }, a)); });
     (op.ps || []).forEach(a => { if (!S.snap.ps.some(x => x.PS_ID === a.PS_ID)) S.snap.ps.push(Object.assign({ _pending: true }, a)); });
@@ -932,7 +981,8 @@ const App = (() => {
      ===================================================================== */
   const ARBEITEN = [['Rebschnitt','#8A5A2B','h'],['Biegen/Anbinden','#B7792F','h'],['Ausbrechen','#6E9A2F','h'],['Heften','#2F7D5B','h'],
     ['Entblättern','#9AAE2A','h'],['Lese','#8E2A3E','h'],['Sonstiges','#7A6A61','h'],
-    ['Mulchen','#6B7F3A','g'],['Bodenbearbeitung','#7A5A45','g'],['Düngung','#6B5B9A','g'],
+    ['Mulchen','#6B7F3A','g'],['Einsaat Begrünung','#4F9A6A','g'],['Walzen/Knicken','#8C9A4A','g'],
+    ['Grubbern','#7A5A45','g'],['Fräsen','#9A6B4A','g'],['Scheibenegge','#6E4E3A','g'],['Bodenbearbeitung','#86705C','g'],['Düngung','#6B5B9A','g'],
     ['Laubschnitt','#1F6E7A','z'],['Unterstockpflege','#A0522D','z'],['Pflanzenschutz','#2F6FB0','z']];
   // h = Handarbeit, z = Schlepper an der Zeile (Reihen), g = Schlepper in der Gasse (Boden)
   const arbeitArt = a => (ARBEITEN.find(x => x[0] === a) || [0, 0, 'h'])[2];
@@ -1124,7 +1174,7 @@ const App = (() => {
         <div class="wb-mini">${wbSVG(w, { arbeit: A, cov: c })}</div>
         <div class="main" style="flex:1;min-width:0"><div class="title">${esc(w.Name)}</div>
         <div class="sub">${[esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f0 ? f0.rows.length + ' Reihen' : 'noch keine Reihen'].filter(Boolean).join(' · ')}</div>
-        <div class="bar"><i style="width:${c.pct.toFixed(1)}%;background:${arbeitFarbe(A)}"></i></div></div>
+        <div class="bar"><i style="width:${c.pct.toFixed(1)}%;background:${arbeitFarbe(A)}"></i></div>${wzBadge(w.Weinberg_ID)}</div>
         <div class="right">${Math.round(c.pct)} %</div></button>`;
     }).join('');
     return `${runningBanner()}${archivBanner()}<div class="section-title"><h2>Weinberge</h2>${saisonBtn()}</div>
@@ -1185,7 +1235,7 @@ const App = (() => {
     if (arch) { wbUI.list = false; wbUI.marks = []; }
     const hist = S.snap.arbeiten.filter(a => a.Weinberg_ID === id && inSaison(a.Datum, sea)).sort((a, b) => String(b.Datum).localeCompare(String(a.Datum))).slice(0, 30);
     openSheet(`<h2>${esc(w.Name)}</h2>
-      <p class="lead">${[esc(w.Lage || ''), w.Flurstueck ? 'Flst. ' + esc(w.Flurstueck) : '', esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f ? f.rows.length + ' Reihen' : ''].filter(Boolean).join(' · ')}</p>
+      <p class="lead">${[esc(w.Lage || ''), w.Flurstueck ? 'Flst. ' + esc(w.Flurstueck) : '', esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f ? f.rows.length + ' Reihen' : ''].filter(Boolean).join(' · ')}</p>${wzBadge(w.Weinberg_ID)}
       ${rv ? `<div class="running" style="background:#E7F0F8;color:var(--ink)">📍 <div><b>GPS-Spuren: ${esc(rv.arbeit || 'Pflanzenschutz')}</b><br><small>Prüfen, mit „Einzeln“ oder „Radieren“ korrigieren, dann speichern. ${(S.ui.psReview || []).length > 1 ? `(noch ${S.ui.psReview.length - 1} weitere)` : ''}</small></div></div>` : ''}
       ${f ? `${rv ? '' : arbeitChips(wbUI.arbeit, 'wbArbeit')}
       <div class="prog" id="wbProg"></div><div id="wbGps"></div>
@@ -1572,8 +1622,10 @@ const App = (() => {
       ${busy || !selSaison().current ? '' : `<div class="startgrid">
         <button class="startcard" onclick="App.jobForm()"><span>🚜</span><b>Schlepper</b><small>mit GPS aufzeichnen oder von Hand eintragen</small></button>
         <button class="startcard ps" onclick="App.psForm()"><span>💧</span><b>Pflanzenschutz</b><small>rechnen, spritzen, dokumentieren</small></button>
-        <button class="startcard hand" onclick="App.handPick()"><span>✋</span><b>Handarbeit</b><small>Weinberg wählen, Reihen markieren</small></button></div>`}
-      <div class="section-title" style="margin-top:22px"><h2>💧 Pflanzenschutz-Doku</h2><small>${groups.size}</small></div>
+        <button class="startcard hand" onclick="App.handPick()"><span>✋</span><b>Handarbeit</b><small>Weinberg wählen, Reihen markieren</small></button>
+        <button class="startcard lese" onclick="App.leseForm()"><span>🍇</span><b>Lese</b><small>Menge, Oechsle, Verbleib</small></button></div>`}
+      ${leseBlock()}
+      <div class="section-title" style="margin-top:22px"><h2>💧 Pflanzenschutz-Doku</h2><button class="saisonbtn" onclick="App.printMenu()">🖨️ ${groups.size}</button></div>
       <div class="card">${cards || '<div class="empty">Noch keine Spritzung dokumentiert.</div>'}</div>
       <div class="section-title" style="margin-top:22px"><h2>Mittel</h2><small>${ml.length}</small></div>
       <div class="card">${ml.map(m => `<button class="row" onclick="App.mittelForm('${esc(m.Mittel)}')"><div class="main"><div class="title">${esc(m.Mittel)}</div>
@@ -1892,7 +1944,425 @@ const App = (() => {
       ${S.ui.psDraft ? `<button class="running" style="width:100%;text-align:left" onclick="App.setMode('weinberg');App.go('ps')">💧 <div><b>Spritzung läuft</b><br><small>seit ${esc(S.ui.psDraft.beginn)} Uhr – hier tippen</small></div></button>` : ''}
       <button class="homecard keller" onclick="App.setMode('keller')"><span class="hc-ico">🍷</span><span><b>Keller</b><small>${bel.length} Fässer belegt · ${fmtNum(liter, 0)} L${offeneAufg().length ? ` · 📝 ${offeneAufg().length} offen` : ''}</small></span></button>
       <button class="homecard weinberg" onclick="App.setMode('weinberg')"><span class="hc-ico">🍇</span><span><b>Weinberg</b><small>${wbs.length} Weinberge · ${fmtHa(ha) || '0 ha'}</small></span></button>
+      <button class="homecard verkauf" onclick="App.setMode('verkauf')"><span class="hc-ico">🍾</span><span><b>Verkauf</b><small>${S.snap.flaschen.reduce((s, b) => s + (num(b.Anzahl) || 0), 0).toLocaleString('de-DE')} Flaschen · ${(n => n + (n === 1 ? ' Bestellung' : ' Bestellungen') + ' offen')(S.snap.bestellungen.filter(b => !b.Storniert_am && !(b.Abgeholt_am && b.Bezahlt_am)).length)}</small></span></button>
       ${(S.ui.psReview || []).length ? `<button class="btn sec" onclick="App.setMode('weinberg');App.psReviewNext()">GPS-Spuren prüfen (${S.ui.psReview.length})</button>` : ''}</div>`;
+  }
+
+  /* =====================================================================
+     VERKAUF: Flaschenlager, Kunden, Bestellungen
+     ===================================================================== */
+  const GROESSEN = ['0.75', '1', '0.5', '0.375', '1.5', '0.2'];
+  const fmtG = g => String(+g).replace('.', ',') + ' l';
+  const fmtEur = v => v == null || v === '' || isNaN(+v) ? '' : (+v).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+  const artId = (wnr, g) => `${wnr}|${+g}`;
+  const artikel = id => S.snap.artikel.find(a => a.Artikel_ID === id);
+  const artName = id => { const a = artikel(id); return a ? a.Name : id; };
+  function bestandFl(id){ return S.snap.flaschen.filter(b => b.Artikel_ID === id).reduce((s, b) => s + (num(b.Anzahl) || 0), 0); }
+  const bestPos = b => jparse(b.Positionen, []);
+  const bestStatus = b => b.Storniert_am ? 'storniert' : b.Abgeholt_am && b.Bezahlt_am ? 'erledigt' : b.Abgeholt_am ? 'abgeholt' : b.Bezahlt_am ? 'bezahlt' : 'offen';
+  const STATUS_TXT = { offen: 'bestellt', abgeholt: 'abgeholt · offen zu zahlen', bezahlt: 'bezahlt · noch abholen', erledigt: 'erledigt', storniert: 'storniert' };
+  function reserviert(id){ return S.snap.bestellungen.filter(b => !b.Abgeholt_am && !b.Storniert_am).reduce((s, b) => s + bestPos(b).filter(p => p.a === id).reduce((x, p) => x + (num(p.n) || 0), 0), 0); }
+  const kunde = id => S.snap.kunden.find(k => k.Kunde_ID === id);
+  const aktiveArtikel = () => S.snap.artikel.filter(a => (a.Aktiv || 'ja') !== 'nein').sort((a, b) => String(a.Name).localeCompare(String(b.Name), 'de', { numeric: true }));
+
+  function viewLager(){
+    const list = aktiveArtikel();
+    const tot = list.reduce((s, a) => s + bestandFl(a.Artikel_ID), 0);
+    const rows = list.map(a => { const b = bestandFl(a.Artikel_ID), r = reserviert(a.Artikel_ID);
+      return `<button class="row" onclick="App.openArtikel('${esc(a.Artikel_ID)}')"><span class="swatch" style="background:${FARBE[(wein(a.Weinnummer) || {}).Farbe] || '#C9B9A2'}"></span>
+        <div class="main"><div class="title">${esc(a.Name)}</div><div class="sub">${[a.Weinnummer ? esc(a.Weinnummer) : '', a.Preis ? fmtEur(a.Preis) : 'kein Preis', r ? `<b style="color:#8A5A10">${r} reserviert</b>` : ''].filter(Boolean).join(' · ')}</div></div>
+        <div class="right">${b.toLocaleString('de-DE')}<small>Flaschen</small></div></button>`; }).join('');
+    return `<div class="section-title"><h2>Flaschenlager</h2><small>${tot.toLocaleString('de-DE')} Flaschen</small></div>
+      <div class="card">${rows || '<div class="empty">Noch keine Flaschen. Beim <b>Abfüllen</b> im Keller kommen sie automatisch hierher – oder lege alte Bestände unten an.</div>'}</div>
+      <div class="btnrow" style="margin-top:14px"><button class="btn sec small" onclick="App.artikelForm()">+ Wein / Bestand anlegen</button><button class="btn sec small" onclick="App.printLager()">🖨️ Bestandsliste</button></div>`;
+  }
+  function openArtikel(id){
+    const a = artikel(id); if (!a) return;
+    const mv = S.snap.flaschen.filter(b => b.Artikel_ID === id).sort((x, y) => String(y.Datum).localeCompare(String(x.Datum))).slice(0, 60);
+    const b = bestandFl(id), r = reserviert(id);
+    openSheet(`<h2>${esc(a.Name)}</h2><p class="lead">${[a.Weinnummer ? 'Weinnummer ' + esc(a.Weinnummer) : '', a.Groesse_L ? fmtG(a.Groesse_L) : '', a.Preis ? fmtEur(a.Preis) + ' je Flasche' : ''].filter(Boolean).join(' · ')}</p>
+      <div class="card" style="padding:14px;margin-bottom:12px"><dl class="kv"><dt>Auf Lager</dt><dd><b>${b.toLocaleString('de-DE')} Flaschen</b></dd>${r ? `<dt>Reserviert (offene Bestellungen)</dt><dd>${r}</dd><dt>Frei</dt><dd>${b - r}</dd>` : ''}</dl></div>
+      <div class="actions">
+        <button class="act" onclick="App.flBuchen('${esc(id)}','Verkauf')"><span class="ico">🛒</span>Verkauf ab Hof</button>
+        <button class="act" onclick="App.flBuchen('${esc(id)}','Eigenverbrauch')"><span class="ico">🍷</span>Eigenverbrauch</button>
+        <button class="act" onclick="App.flBuchen('${esc(id)}','Bruch/Schwund')"><span class="ico">💥</span>Bruch</button>
+        <button class="act" onclick="App.flBuchen('${esc(id)}','Probe/Geschenk')"><span class="ico">🎁</span>Probe / Geschenk</button>
+        <button class="act" onclick="App.flBuchen('${esc(id)}','Zugang')"><span class="ico">📥</span>Zugang</button>
+        <button class="act" onclick="App.flBuchen('${esc(id)}','Inventur')"><span class="ico">✏️</span>Inventur (Bestand)</button></div>
+      <button class="btn sec" onclick="App.artikelForm('${esc(id)}')">Name / Preis ändern</button>
+      <div class="log-day" style="margin-top:14px">Bewegungen</div>
+      <div class="card">${mv.map(m => `<div class="row"><div class="main"><div class="title">${esc(m.Art)}${m.Kunde ? ' · ' + esc(m.Kunde) : ''}</div><div class="sub">${fmtDate(m.Datum)}${m.Notiz ? ' · ' + esc(m.Notiz) : ''}${m.Erfasst_von ? ' · ' + esc(m.Erfasst_von) : ''}</div>${m._pending ? '<div class="pending">⟳ wartet auf Übertragung</div>' : ''}</div>
+        <div class="right" style="color:${num(m.Anzahl) < 0 ? '#B4452A' : '#2F7D5B'}">${num(m.Anzahl) > 0 ? '+' : ''}${num(m.Anzahl)}</div></div>`).join('') || '<div class="empty">Noch keine Bewegungen.</div>'}</div>`);
+  }
+  function artikelForm(id){
+    const a = (id && artikel(id)) || {};
+    const weine = S.snap.partien;
+    openSheet(`<h2>${id ? 'Wein im Lager bearbeiten' : 'Wein / Bestand anlegen'}</h2><p class="lead">${id ? '' : 'Für Flaschen, die nicht über „Abfüllen“ kamen – z. B. ältere Jahrgänge oder Zukauf.'}</p>
+      <form id="frm" onsubmit="event.preventDefault();App.artikelSave('${esc(id || '')}')"><p id="frmErr" class="note warn" hidden></p>
+        ${field('Bezeichnung', inTxt('Name', a.Name, 'z. B. 2025 Riesling trocken 1,0 l'))}
+        <div class="two">${field('Wein (optional)', `<select name="Weinnummer"><option value="">–</option>${weine.map(p => `<option value="${esc(p.Weinnummer)}" ${p.Weinnummer === a.Weinnummer ? 'selected' : ''}>${esc(p.Weinnummer)} ${esc(p.Bezeichnung)}</option>`).join('')}</select>`)}
+          ${field('Flasche', `<select name="Groesse_L">${GROESSEN.map(g => `<option value="${g}" ${+g === +(a.Groesse_L || 0.75) ? 'selected' : ''}>${fmtG(g)}</option>`).join('')}</select>`)}</div>
+        <div class="two">${field('Preis je Flasche (€)', inNum('Preis', num(a.Preis), 'optional'))}${id ? '<div></div>' : field('Bestand jetzt', inNum('Anzahl', null, 'Flaschen', '1'))}</div>
+        <button class="btn" type="submit">Speichern</button>
+        ${id ? `<button class="btn sec" type="button" onclick="App.artikelAus('${esc(id)}')">${(a.Aktiv || 'ja') === 'nein' ? 'Wieder anzeigen' : 'Ausblenden (ausverkauft)'}</button>` : ''}
+        <button class="btn sec" type="button" onclick="App.closeSheet()">Abbrechen</button></form>`);
+  }
+  function artikelSave(id){
+    const fd = Object.fromEntries(new FormData($('#frm')).entries());
+    if (!fd.Name || !fd.Name.trim()) return formError('Bitte eine Bezeichnung eintragen.');
+    const old = (id && artikel(id)) || {};
+    const aid = id || (fd.Weinnummer ? artId(fd.Weinnummer, fd.Groesse_L) : 'A-' + uid().slice(0, 8));
+    if (!id && artikel(aid)) return formError('Diesen Wein in dieser Flaschengröße gibt es schon im Lager.');
+    const a = Object.assign({}, old, { Artikel_ID: aid, Name: fd.Name.trim(), Weinnummer: fd.Weinnummer || '', Groesse_L: num(fd.Groesse_L), Preis: num(fd.Preis), Aktiv: old.Aktiv || 'ja' });
+    delete a._pending;
+    const op = { artikel: a };
+    if (!id && num(fd.Anzahl)) op.flaschen = [{ Bewegung_ID: uid(), Datum: today(), Artikel_ID: aid, Artikel: a.Name, Weinnummer: a.Weinnummer, Groesse_L: a.Groesse_L, Anzahl: num(fd.Anzahl), Art: 'Anfangsbestand', Erfasst_am: new Date().toISOString(), Erfasst_von: S.name || '' }];
+    queueOp(op, 'Gespeichert'); openArtikel(aid);
+  }
+  function artikelAus(id){ const a = artikel(id); if (!a) return; const u = Object.assign({}, a, { Aktiv: (a.Aktiv || 'ja') === 'nein' ? 'ja' : 'nein' }); delete u._pending; queueOp({ artikel: u }, u.Aktiv === 'nein' ? 'Ausgeblendet' : 'Wieder sichtbar'); closeSheet(); }
+  function flBuchen(id, art){
+    const a = artikel(id); if (!a) return;
+    const inv = art === 'Inventur';
+    openSheet(`<h2>${esc(art)}</h2><p class="lead">${esc(a.Name)} · auf Lager: ${bestandFl(id)}</p>
+      <form id="frm" onsubmit="event.preventDefault();App.flSave('${esc(id)}','${esc(art)}')"><p id="frmErr" class="note warn" hidden></p>
+        <div class="two">${field(inv ? 'Gezählter Bestand' : 'Flaschen', inNum('Anzahl', null, inv ? 'tatsächlich da' : 'Anzahl', '1'))}${field('Datum', `<input name="Datum" type="date" value="${today()}">`)}</div>
+        ${art === 'Verkauf' ? field('Käufer (optional)', inTxt('Kunde', '', 'Name')) : ''}
+        ${field('Notiz', inTxt('Notiz', '', 'optional'))}
+        <button class="btn" type="submit">Buchen</button><button class="btn sec" type="button" onclick="App.openArtikel('${esc(id)}')">Abbrechen</button></form>`);
+  }
+  function flSave(id, art){
+    const a = artikel(id), fd = Object.fromEntries(new FormData($('#frm')).entries());
+    let n = num(fd.Anzahl); if (n == null) return formError('Bitte die Anzahl eintragen.');
+    if (art === 'Inventur') { n = n - bestandFl(id); if (!n) { toast('Bestand stimmt schon'); return openArtikel(id); } }
+    else if (art !== 'Zugang') n = -Math.abs(n);
+    queueOp({ flaschen: [{ Bewegung_ID: uid(), Datum: fd.Datum || today(), Artikel_ID: id, Artikel: a.Name, Weinnummer: a.Weinnummer || '', Groesse_L: a.Groesse_L, Anzahl: n, Art: art,
+      Kunde: fd.Kunde || '', Notiz: fd.Notiz || '', Erfasst_am: new Date().toISOString(), Erfasst_von: S.name || '' }] }, `${art}: ${n > 0 ? '+' : ''}${n}`);
+    openArtikel(id);
+  }
+
+  /* ---------- Bestellungen ---------- */
+  function viewBest(){
+    const all = [...S.snap.bestellungen].sort((a, b) => String(b.Datum).localeCompare(String(a.Datum)) || String(b.Erfasst_am || '').localeCompare(String(a.Erfasst_am || '')));
+    const card = b => { const st = bestStatus(b), pos = bestPos(b);
+      return `<button class="row" onclick="App.openBest('${esc(b.Bestellung_ID)}')"><div class="main"><div class="title">${esc(b.Kunde || 'ohne Name')}</div>
+        <div class="sub">${fmtDate(b.Datum)}${b.Abholung_geplant ? ' · Abholung ' + fmtDate(b.Abholung_geplant) : ''} · ${pos.map(p => `${p.n}× ${esc(p.name || artName(p.a))}`).join(', ')}</div>
+        <span class="chip st-${st}">${STATUS_TXT[st]}</span>${b._pending ? '<div class="pending">⟳ wartet auf Übertragung</div>' : ''}</div><div class="right">${fmtEur(b.Summe)}</div></button>`; };
+    const offen = all.filter(b => ['offen', 'abgeholt', 'bezahlt'].includes(bestStatus(b)));
+    const fertig = all.filter(b => !offen.includes(b)).slice(0, 40);
+    return `<div class="section-title"><h2>Offene Bestellungen</h2><small>${offen.length}</small></div>
+      <div class="card">${offen.map(card).join('') || '<div class="empty">Keine offenen Bestellungen.</div>'}</div>
+      <button class="btn" style="margin-top:14px" onclick="App.bestForm()">+ Neue Bestellung</button>
+      ${fertig.length ? `<div class="section-title" style="margin-top:22px"><h2>Erledigt</h2><small>letzte ${fertig.length}</small></div><div class="card">${fertig.map(card).join('')}</div>` : ''}`;
+  }
+  function bestForm(id, kid){
+    const b = (id && S.snap.bestellungen.find(x => x.Bestellung_ID === id)) || { Kunde_ID: kid || '' };
+    const pos = new Map(bestPos(b).map(p => [p.a, p]));
+    const arts = aktiveArtikel();
+    const kn = [...S.snap.kunden].sort((a, c) => String(a.Name).localeCompare(String(c.Name), 'de'));
+    openSheet(`<h2>${id ? 'Bestellung ändern' : 'Neue Bestellung'}</h2>
+      <form id="frm" oninput="App.bestCalc()" onsubmit="event.preventDefault();App.bestSave('${esc(id || '')}')"><p id="frmErr" class="note warn" hidden></p>
+        ${field('Kunde', `<select name="Kunde_ID" onchange="App.bestKunde(this)"><option value="">– Kunde wählen –</option><option value="__neu">+ neuer Kunde</option>${kn.map(k => `<option value="${esc(k.Kunde_ID)}" ${k.Kunde_ID === b.Kunde_ID ? 'selected' : ''}>${esc(k.Name)}</option>`).join('')}</select>`)}
+        <div id="neuKunde" style="display:none"><div class="two">${field('Name', inTxt('kName', '', 'Vor- und Nachname'))}${field('Telefon', `<input name="kTel" type="tel" placeholder="optional">`)}</div></div>
+        <div class="two">${field('Bestellt am', `<input name="Datum" type="date" value="${esc(String(b.Datum || today()).slice(0, 10))}">`)}${field('Abholung geplant', `<input name="Abholung_geplant" type="date" value="${esc(String(b.Abholung_geplant || '').slice(0, 10))}">`, '(optional)')}</div>
+        <label style="display:block;font-size:13px;font-weight:600;color:#5E4B42;margin:4px 2px 6px">Weine</label>
+        <div class="card">${arts.map(a => { const p = pos.get(a.Artikel_ID) || {}; const frei = bestandFl(a.Artikel_ID) - reserviert(a.Artikel_ID) + (num(p.n) || 0);
+          return `<div class="row posrow"><div class="main"><div class="title">${esc(a.Name)}</div><div class="sub">${frei} frei${a.Preis ? ' · ' + fmtEur(a.Preis) : ''}</div></div>
+            <input name="n_${esc(a.Artikel_ID)}" type="number" inputmode="numeric" min="0" step="1" placeholder="0" value="${p.n || ''}" class="qty">
+            <input name="p_${esc(a.Artikel_ID)}" type="hidden" value="${p.p ?? (num(a.Preis) ?? '')}"></div>`; }).join('') || '<div class="empty">Noch keine Weine im Lager.</div>'}</div>
+        <p class="note" id="bestSum" style="margin:10px 2px"></p>
+        ${field('Notiz', inTxt('Notiz', b.Notiz, 'z. B. holt Samstag ab'))}
+        <button class="btn" type="submit">Speichern</button><button class="btn sec" type="button" onclick="App.closeSheet()">Abbrechen</button></form>`);
+    bestCalc();
+  }
+  function bestKunde(sel){ $('#neuKunde').style.display = sel.value === '__neu' ? '' : 'none'; }
+  function bestRead(){
+    const fd = Object.fromEntries(new FormData($('#frm')).entries());
+    const pos = aktiveArtikel().map(a => ({ a: a.Artikel_ID, n: num(fd['n_' + a.Artikel_ID]) || 0, p: num(fd['p_' + a.Artikel_ID]), name: a.Name })).filter(p => p.n > 0);
+    const sum = pos.reduce((s, p) => s + (p.p || 0) * p.n, 0);
+    return { fd, pos, sum };
+  }
+  function bestCalc(){ const el = $('#bestSum'); if (!el) return; const r = bestRead(); el.innerHTML = r.pos.length ? `${r.pos.reduce((s, p) => s + p.n, 0)} Flaschen${r.pos.some(p => p.p != null) ? ` · <b>${fmtEur(r.sum)}</b>` : ''}${r.pos.some(p => p.p == null) ? ' <span style="color:var(--muted)">(Preis fehlt – im Lager beim Wein eintragen)</span>' : ''}` : 'Noch nichts ausgewählt.'; }
+  function bestSave(id){
+    const { fd, pos, sum } = bestRead();
+    if (!pos.length) return formError('Bitte mindestens einen Wein mit Anzahl eintragen.');
+    const op = {};
+    let kid = fd.Kunde_ID, kname = '';
+    if (kid === '__neu') { if (!fd.kName) return formError('Bitte den Namen des Kunden eintragen.');
+      kid = 'K-' + uid().slice(0, 8); kname = fd.kName.trim(); op.kunde = { Kunde_ID: kid, Name: kname, Telefon: fd.kTel || '', Erstellt_am: new Date().toISOString() }; }
+    else if (kid) kname = (kunde(kid) || {}).Name || '';
+    else return formError('Bitte einen Kunden wählen oder neu anlegen.');
+    const old = (id && S.snap.bestellungen.find(x => x.Bestellung_ID === id)) || {};
+    const b = Object.assign({}, old, { Bestellung_ID: id || 'B-' + uid().slice(0, 8), Datum: fd.Datum || today(), Kunde_ID: kid, Kunde: kname, Positionen: JSON.stringify(pos),
+      Summe: +sum.toFixed(2), Abholung_geplant: fd.Abholung_geplant || '', Notiz: fd.Notiz || '', Erfasst_von: old.Erfasst_von || S.name || '', Erfasst_am: old.Erfasst_am || new Date().toISOString() });
+    delete b._pending; op.bestellung = b;
+    queueOp(op, 'Bestellung gespeichert');
+    openBest(b.Bestellung_ID);
+  }
+  function openBest(id){
+    const b = S.snap.bestellungen.find(x => x.Bestellung_ID === id); if (!b) return;
+    const st = bestStatus(b), pos = bestPos(b), k = kunde(b.Kunde_ID) || {};
+    openSheet(`<h2>${esc(b.Kunde || 'Bestellung')}</h2><p class="lead"><span class="chip st-${st}">${STATUS_TXT[st]}</span> · vom ${fmtDate(b.Datum)}${b.Abholung_geplant ? ' · Abholung ' + fmtDate(b.Abholung_geplant) : ''}</p>
+      <div class="card">${pos.map(p => `<div class="row"><div class="main"><div class="title">${p.n} × ${esc(p.name || artName(p.a))}</div><div class="sub">${p.p != null ? fmtEur(p.p) + ' je Flasche' : ''}</div></div><div class="right">${p.p != null ? fmtEur(p.p * p.n) : ''}</div></div>`).join('')}
+        ${pos.some(p => p.p != null) ? `<div class="row"><div class="main"><b>Summe</b></div><div class="right"><b>${fmtEur(b.Summe)}</b></div></div>` : ''}</div>
+      ${b.Notiz ? `<p class="note">${esc(b.Notiz)}</p>` : ''}
+      ${k.Telefon ? `<p class="note">📞 <a href="tel:${esc(k.Telefon)}">${esc(k.Telefon)}</a></p>` : ''}
+      ${st === 'storniert' ? '' : `
+        ${b.Abgeholt_am ? `<p class="note">✓ Abgeholt am ${fmtDate(b.Abgeholt_am)} – Flaschen sind ausgebucht.</p>` : `<button class="btn" onclick="App.bestAbgeholt('${esc(id)}')">✓ Abgeholt – Flaschen ausbuchen</button>`}
+        ${b.Bezahlt_am ? `<p class="note">✓ Bezahlt am ${fmtDate(b.Bezahlt_am)}</p>` : `<button class="btn ${b.Abgeholt_am ? '' : 'sec'}" onclick="App.bestBezahlt('${esc(id)}')">💶 Bezahlt</button>`}
+        ${b.Abgeholt_am ? '' : `<button class="btn sec" onclick="App.bestForm('${esc(id)}')">Ändern</button>`}`}
+      <button class="btn sec" onclick="App.printBest('${esc(id)}')">🖨️ Abholschein / Lieferschein</button>
+      ${b.Abgeholt_am || st === 'storniert' ? '' : `<button class="btn sec" onclick="App.bestStorno('${esc(id)}', this)">Stornieren</button>`}
+      ${b.Kunde_ID ? `<button class="btn sec" onclick="App.openKunde('${esc(b.Kunde_ID)}')">Alle Käufe von ${esc(b.Kunde)}</button>` : ''}`);
+  }
+  function bestUpd(id, patch, extra, msg){ const b = S.snap.bestellungen.find(x => x.Bestellung_ID === id); if (!b) return; const u = Object.assign({}, b, patch); delete u._pending; queueOp(Object.assign({ bestellung: u }, extra || {}), msg); openBest(id); }
+  function bestAbgeholt(id){
+    const b = S.snap.bestellungen.find(x => x.Bestellung_ID === id); if (!b || b.Abgeholt_am) return;
+    const now = new Date().toISOString();
+    const fl = bestPos(b).map((p, i) => { const a = artikel(p.a) || {}; return { Bewegung_ID: `${id}-${i}`, Datum: today(), Artikel_ID: p.a, Artikel: p.name || a.Name || '', Weinnummer: a.Weinnummer || '', Groesse_L: a.Groesse_L || '',
+      Anzahl: -Math.abs(p.n), Art: 'Verkauf', Bestellung_ID: id, Kunde: b.Kunde || '', Erfasst_am: now, Erfasst_von: S.name || '' }; });
+    bestUpd(id, { Abgeholt_am: today() }, { flaschen: fl }, 'Abgeholt – Flaschen ausgebucht');
+  }
+  function bestBezahlt(id){ bestUpd(id, { Bezahlt_am: today() }, null, 'Als bezahlt markiert'); }
+  function bestStorno(id, btn){ if (!btn.dataset.sure) { btn.dataset.sure = 1; btn.textContent = 'Wirklich stornieren?'; btn.classList.add('danger'); return; } bestUpd(id, { Storniert_am: today() }, null, 'Storniert'); }
+
+  /* ---------- Kunden ---------- */
+  function viewKunden(){
+    const q = (S.ui.kq || '').toLowerCase();
+    const list = [...S.snap.kunden].filter(k => !q || String(k.Name).toLowerCase().includes(q)).sort((a, b) => String(a.Name).localeCompare(String(b.Name), 'de'));
+    const sumK = id => S.snap.bestellungen.filter(b => b.Kunde_ID === id && !b.Storniert_am);
+    return `<div class="section-title"><h2>Kunden</h2><small>${S.snap.kunden.length}</small></div>
+      <input class="search" placeholder="Suchen …" value="${esc(S.ui.kq || '')}" oninput="App.kSuche(this.value)">
+      <div class="card" id="kList">${list.map(k => { const bs = sumK(k.Kunde_ID); return `<button class="row" onclick="App.openKunde('${esc(k.Kunde_ID)}')"><div class="main"><div class="title">${esc(k.Name)}</div>
+        <div class="sub">${bs.length} Bestellung${bs.length === 1 ? '' : 'en'}${bs.length ? ' · zuletzt ' + fmtDate(bs.map(b => b.Datum).sort().pop()) : ''}</div></div><div class="right">${fmtEur(bs.reduce((s, b) => s + (num(b.Summe) || 0), 0))}</div></button>`; }).join('') || '<div class="empty">Noch keine Kunden.</div>'}</div>
+      <button class="btn sec" style="margin-top:14px" onclick="App.kundeForm()">+ Kunde anlegen</button>`;
+  }
+  let kT = 0; function kSuche(v){ S.ui.kq = v; clearTimeout(kT); kT = setTimeout(() => { const pos = v.length; render(); const i = $('input.search'); if (i) { i.focus(); i.setSelectionRange(pos, pos); } }, 250); }
+  function openKunde(id){
+    const k = kunde(id); if (!k) return;
+    const bs = S.snap.bestellungen.filter(b => b.Kunde_ID === id).sort((a, b) => String(b.Datum).localeCompare(String(a.Datum)));
+    openSheet(`<h2>${esc(k.Name)}</h2><p class="lead">${[k.Telefon ? `📞 <a href="tel:${esc(k.Telefon)}">${esc(k.Telefon)}</a>` : '', k.EMail ? `✉️ ${esc(k.EMail)}` : '', k.Adresse ? esc(k.Adresse) : ''].filter(Boolean).join('<br>')}</p>
+      ${k.Notiz ? `<p class="note">${esc(k.Notiz)}</p>` : ''}
+      <button class="btn" onclick="App.bestForm('', '${esc(id)}')">+ Neue Bestellung</button>
+      <div class="log-day" style="margin-top:14px">Käufe</div>
+      <div class="card">${bs.map(b => `<button class="row" onclick="App.openBest('${esc(b.Bestellung_ID)}')"><div class="main"><div class="title">${fmtDate(b.Datum)} · ${STATUS_TXT[bestStatus(b)]}</div>
+        <div class="sub">${bestPos(b).map(p => `${p.n}× ${esc(p.name || artName(p.a))}`).join(', ')}</div></div><div class="right">${fmtEur(b.Summe)}</div></button>`).join('') || '<div class="empty">Noch keine Käufe.</div>'}</div>
+      <div class="btnrow" style="margin-top:12px"><button class="btn sec small" onclick="App.kundeForm('${esc(id)}')">✏️ Daten ändern</button><button class="btn sec small" onclick="App.printKunde('${esc(id)}')">🖨️ Kaufübersicht</button></div>`);
+  }
+  function kundeForm(id){
+    const k = (id && kunde(id)) || {};
+    openSheet(`<h2>${id ? 'Kunde bearbeiten' : 'Neuer Kunde'}</h2><p class="lead">Nur speichern, was du wirklich brauchst.</p>
+      <form id="frm" onsubmit="event.preventDefault();App.kundeSave('${esc(id || '')}')"><p id="frmErr" class="note warn" hidden></p>
+        ${field('Name', inTxt('Name', k.Name, 'Vor- und Nachname'))}
+        <div class="two">${field('Telefon', `<input name="Telefon" type="tel" value="${esc(k.Telefon || '')}">`)}${field('E-Mail', `<input name="EMail" type="email" value="${esc(k.EMail || '')}" autocapitalize="off">`)}</div>
+        ${field('Adresse', inTxt('Adresse', k.Adresse, 'optional'))}
+        ${field('Notiz', inTxt('Notiz', k.Notiz, 'z. B. mag trockene Weine'))}
+        <button class="btn" type="submit">Speichern</button><button class="btn sec" type="button" onclick="App.closeSheet()">Abbrechen</button></form>`);
+  }
+  function kundeSave(id){
+    const fd = Object.fromEntries(new FormData($('#frm')).entries());
+    if (!fd.Name || !fd.Name.trim()) return formError('Bitte den Namen eintragen.');
+    const old = (id && kunde(id)) || {};
+    const k = Object.assign({}, old, { Kunde_ID: id || 'K-' + uid().slice(0, 8), Name: fd.Name.trim(), Telefon: fd.Telefon || '', EMail: fd.EMail || '', Adresse: fd.Adresse || '', Notiz: fd.Notiz || '', Erstellt_am: old.Erstellt_am || new Date().toISOString() });
+    delete k._pending;
+    queueOp({ kunde: k }, 'Kunde gespeichert');
+    if (id) { const upd = S.snap.bestellungen.filter(b => b.Kunde_ID === id && b.Kunde !== k.Name); upd.forEach(b => { b.Kunde = k.Name; }); }
+    openKunde(k.Kunde_ID);
+  }
+  function verkaufNew(){
+    openSheet(`<h2>Verkauf</h2><p class="lead">Was möchtest du eintragen?</p><div class="actions" style="grid-template-columns:1fr 1fr">
+      <button class="act" onclick="App.bestForm()"><span class="ico">🧾</span>Bestellung</button>
+      <button class="act" onclick="App.schnellVerkauf()"><span class="ico">🛒</span>Verkauf ab Hof</button>
+      <button class="act" onclick="App.kundeForm()"><span class="ico">👤</span>Kunde</button>
+      <button class="act" onclick="App.artikelForm()"><span class="ico">🍾</span>Wein ins Lager</button></div>`);
+  }
+  function schnellVerkauf(){
+    const arts = aktiveArtikel();
+    openSheet(`<h2>🛒 Verkauf ab Hof</h2><p class="lead">Welcher Wein?</p><div class="card">${arts.map(a => `<button class="row" onclick="App.flBuchen('${esc(a.Artikel_ID)}','Verkauf')"><div class="main"><div class="title">${esc(a.Name)}</div><div class="sub">${bestandFl(a.Artikel_ID)} auf Lager</div></div></button>`).join('') || '<div class="empty">Noch keine Weine im Lager.</div>'}</div>`);
+  }
+
+  /* =====================================================================
+     LESE & WARTEZEITEN
+     ===================================================================== */
+  function wartezeitBis(wid){
+    let end = '';
+    S.snap.ps.filter(r => r.Weinberg_ID === wid).forEach(r => {
+      const m = S.snap.mittel.find(x => x.Mittel === r.Mittel), wz = m ? num(m.Wartezeit_Tage) : null;
+      if (wz == null) return;
+      const d = new Date(String(r.Datum).slice(0, 10) + 'T12:00:00'); d.setDate(d.getDate() + wz);
+      const iso = d.toISOString().slice(0, 10); if (iso > end) end = iso;
+    });
+    return end;
+  }
+  const wzBadge = wid => { const e = wartezeitBis(wid); return e && e >= today() ? `<span class="wz">⏳ Wartezeit bis ${fmtDate(e)}</span>` : ''; };
+  const VERBLEIB = ['Eigener Keller', 'Most verkauft', 'Trauben verkauft', 'Sonstiges'];
+  function leseForm(wid){
+    const wbs = wbList();
+    openSheet(`<h2>🍇 Lese erfassen</h2><p class="lead">Pro Weinberg und Tag – so wie es ins Lesebuch gehört.</p>
+      <form id="frm" oninput="App.leseCheck()" onsubmit="event.preventDefault();App.leseSave()"><p id="frmErr" class="note warn" hidden></p>
+        ${field('Weinberg', `<select name="Weinberg_ID" onchange="App.leseCheck()">${wbs.map(w => `<option value="${esc(w.Weinberg_ID)}" ${w.Weinberg_ID === wid ? 'selected' : ''}>${esc(w.Name)}${w.Rebsorte ? ' – ' + esc(w.Rebsorte) : ''}</option>`).join('')}</select>`)}
+        <p id="wzWarn" class="note warn" hidden></p>
+        <div class="two">${field('Datum', `<input name="Datum" type="date" value="${today()}">`)}${field('Menge (kg)', inNum('Menge_kg', null, 'kg'))}</div>
+        <div class="two">${field('Mostgewicht (°Oe)', inNum('Mostgewicht_Oe', null, '°Oe'))}${field('Nat. Alkohol (% vol)', inNum('Nat_Alkohol_vol', null, 'optional'))}</div>
+        <div class="two">${field('Verbleib', `<select name="Verbleib">${opts(VERBLEIB, 'Eigener Keller')}</select>`)}${field('Weinnummer', `<select name="Weinnummer"><option value="">–</option>${S.snap.partien.map(p => `<option value="${esc(p.Weinnummer)}">${esc(p.Weinnummer)} ${esc(p.Bezeichnung)}</option>`).join('')}</select>`, '(in welches Fass/Partie)')}</div>
+        ${field('Beleg / Bemerkung', inTxt('Bemerkung', '', 'z. B. Wiegeschein-Nr., Käufer'))}
+        <label class="gpsopt"><input type="checkbox" name="fertig" checked> Weinberg ist damit fertig gelesen</label>
+        <button class="btn" type="submit">Speichern</button><button class="btn sec" type="button" onclick="App.closeSheet()">Abbrechen</button></form>`);
+    leseCheck();
+  }
+  function leseCheck(){
+    const f = $('#frm'), el = $('#wzWarn'); if (!f || !el) return;
+    const e = wartezeitBis(f.Weinberg_ID.value), d = f.Datum.value || today();
+    el.hidden = !(e && e > d); if (!el.hidden) el.innerHTML = `⚠️ Wartezeit läuft noch bis <b>${fmtDate(e)}</b> (letzte Pflanzenschutz-Anwendung). Vorher nicht lesen.`;
+  }
+  function leseSave(){
+    const fd = Object.fromEntries(new FormData($('#frm')).entries()), w = wbById(fd.Weinberg_ID);
+    if (!w) return formError('Bitte einen Weinberg wählen.');
+    if (num(fd.Menge_kg) == null) return formError('Bitte die Menge in kg eintragen.');
+    const id = 'L-' + uid().slice(0, 10), now = new Date().toISOString();
+    const op = { lese: [{ Lese_ID: id, Datum: fd.Datum || today(), Weinberg_ID: w.Weinberg_ID, Weinberg: w.Name, Herkunft: [w.Lage, w.Gemarkung, w.Flurstueck ? 'Flst. ' + w.Flurstueck : ''].filter(Boolean).join(', '),
+      Rebsorte: w.Rebsorte || '', Menge_kg: num(fd.Menge_kg), Mostgewicht_Oe: num(fd.Mostgewicht_Oe), Nat_Alkohol_vol: num(fd.Nat_Alkohol_vol), Weinnummer: fd.Weinnummer || '', Verbleib: fd.Verbleib, Beleg: '', Bemerkung: fd.Bemerkung || '',
+      Erfasst_am: now, Erfasst_von: S.name || '' }] };
+    const f = frame(w);
+    if (fd.fertig && f) op.arbeiten = [{ Arbeit_ID: id + '-a', Datum: fd.Datum || today(), Weinberg_ID: w.Weinberg_ID, Weinberg: w.Name, Arbeit: 'Lese', Anteil_Prozent: 100,
+      Reihen: JSON.stringify(f.rows.map((r, i) => [i, 0, 1])), Person: S.name || '', Notiz: `${fmtNum(num(fd.Menge_kg), 0)} kg${num(fd.Mostgewicht_Oe) ? ', ' + fd.Mostgewicht_Oe + ' °Oe' : ''}`, Erfasst_am: now }];
+    queueOp(op, 'Lese gespeichert'); closeSheet(); tab = 'ps'; render();
+  }
+  function leseBlock(){
+    const sea = selSaison(), list = S.snap.lesegut.filter(l => l.Lese_ID && inSaison(l.Datum, sea)).sort((a, b) => String(b.Datum).localeCompare(String(a.Datum)));
+    if (!list.length) return '';
+    const kg = list.reduce((s, l) => s + (num(l.Menge_kg) || 0), 0);
+    return `<div class="section-title" style="margin-top:22px"><h2>🍇 Lese</h2><small>${fmtNum(kg, 0)} kg</small></div>
+      <div class="card">${list.map(l => `<div class="row"><div class="main"><div class="title">${esc(l.Weinberg || '')} · ${fmtNum(num(l.Menge_kg), 0)} kg${num(l.Mostgewicht_Oe) ? ' · ' + l.Mostgewicht_Oe + ' °Oe' : ''}</div>
+        <div class="sub">${fmtDate(l.Datum)} · ${esc(l.Verbleib || '')}${l.Weinnummer ? ' → ' + esc(weinName(l.Weinnummer)) : ''}</div>${l._pending ? '<div class="pending">⟳ wartet auf Übertragung</div>' : ''}</div></div>`).join('')}</div>`;
+  }
+
+  /* =====================================================================
+     DRUCKEN / PDF
+     ===================================================================== */
+  function printDoc(title, sub, body){
+    const el = $('#printArea');
+    el.innerHTML = `<div class="ph"><div><h1>${esc(title)}</h1><div class="psub">${sub || ''}</div></div><div class="pb">${esc(S.ui.betrieb || '')}<br><small>erstellt ${fmtDate(today())}${S.name ? ' von ' + esc(S.name) : ''}</small></div></div>${body}`;
+    closeSheet();
+    setTimeout(() => { try { window.print(); } catch (e) { toast('Drucken wird hier nicht unterstützt'); } }, 350);
+  }
+  const ptable = (head, rows, foot) => `<table class="pt"><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.length ? rows.map(r => `<tr>${r.map(c => `<td>${c == null ? '' : c}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${head.length}"><i>keine Einträge</i></td></tr>`}</tbody>${foot ? `<tfoot><tr>${foot.map(c => `<td>${c == null ? '' : c}</td>`).join('')}</tr></tfoot>` : ''}</table>`;
+  const zr = (v, b) => v === '0000' ? 'gesamter Zeitraum' : `Zeitraum ${fmtDate(v)} – ${fmtDate(b)}`;
+  function printMenu(){
+    const sea = selSaison(), von = sea.iso, bis = sea.current ? today() : String(+sea.iso.slice(0, 4) + 1) + '-10-31';
+    const D = (k, t, d, extra = '') => `<button class="row" onclick="App.printRun('${k}')"><div class="main"><div class="title">${t}</div><div class="sub">${d}</div></div>${extra}</button>`;
+    openSheet(`<h2>🖨️ Drucken / PDF</h2><p class="lead">Auf dem iPhone öffnet sich der Druckdialog – dort kannst du drucken oder über „Teilen → In Dateien sichern“ ein PDF speichern.</p>
+      <div class="two">${field('Von', `<input id="pVon" type="date" value="${von}">`)}${field('Bis', `<input id="pBis" type="date" value="${bis}">`)}</div>
+      ${field('Name des Betriebs (Kopfzeile)', `<input id="pBetrieb" value="${esc(S.ui.betrieb || '')}" placeholder="z. B. Weingut Muster">`)}
+      <div class="log-day">Keller</div><div class="card">
+        ${D('kellerbuch', 'Kellerbuch', 'Alle Vorgänge im Zeitraum')}
+        ${field('', `<select id="pWein"><option value="">Alle Weine</option>${S.snap.partien.map(p => `<option value="${esc(p.Weinnummer)}">${esc(p.Weinnummer)} ${esc(p.Bezeichnung)}</option>`).join('')}</select>`)}
+        ${D('weinkonto', 'Weinkonto des gewählten Weins', 'Stammdaten, Vorgänge und Bestand')}
+        ${D('faesser', 'Fassliste', 'Alle Fässer mit Inhalt')}
+        ${D('etiketten', 'QR-Etiketten für die Fässer', 'A4, 8 Etiketten je Seite – zum Laminieren')}</div>
+      <div class="log-day">Weinberg</div><div class="card">
+        ${D('ps', 'Pflanzenschutz-Aufzeichnung', 'Alle Anwendungen im Zeitraum')}
+        ${D('tagebuch', 'Weinberg-Tagebuch', 'Arbeiten je Weinberg mit Stunden')}
+        ${D('lese', 'Lese-Übersicht', 'Mengen, Mostgewichte, Verbleib')}
+        ${D('weinberge', 'Weinbergsliste', 'Flächen, Flurstücke, Rebsorten')}</div>
+      <div class="log-day">Verkauf</div><div class="card">
+        ${D('lager', 'Flaschenlager', 'Bestand und Bewegungen im Zeitraum')}
+        ${D('bestellungen', 'Bestellungen', 'Alle Bestellungen im Zeitraum')}</div>`);
+  }
+  function pRange(){ const v = ($('#pVon') || {}).value || '0000', b = ($('#pBis') || {}).value || '9999'; const be = $('#pBetrieb'); if (be) { S.ui.betrieb = be.value.trim(); save(); } return { v, b, in: d => { const x = String(d || '').slice(0, 10); return x >= v && x <= b; } }; }
+  function printRun(k, W0){
+    const R = pRange(), W = W0 || ($('#pWein') || {}).value || '';
+    const sub = zr(R.v, R.b);
+    if (k === 'kellerbuch' || k === 'weinkonto') {
+      if (k === 'weinkonto' && !W) return toast('Bitte oben einen Wein wählen');
+      const rows = S.snap.register.filter(r => R.in(r.Datum) && (!W || r.Weinnummer === W)).sort((a, b) => String(a.Datum).localeCompare(String(b.Datum)) || String(a.Erfasst_am || '').localeCompare(String(b.Erfasst_am || '')));
+      const body = ptable(['Datum', 'Vorgang', 'Wein', 'Fass', 'Zugang L', 'Abgang L', 'Stoff / Menge', 'Angaben', 'von'], rows.map(r => [fmtDate(r.Datum), esc(r.Vorgangsart), esc(r.Weinnummer || '') + (W ? '' : '<br><small>' + esc(weinName(r.Weinnummer)) + '</small>'),
+        esc([r.Behaelter_von, r.Behaelter_nach].filter(Boolean).join(' → ')), num(r.Zugang_L) ? fmtNum(r.Zugang_L, 1) : '', num(r.Abgang_L) ? fmtNum(r.Abgang_L, 1) : '',
+        r.Stoff ? esc(r.Stoff) + (r.Stoffmenge ? ' ' + esc(r.Stoffmenge) + ' ' + esc((stoff(r.Stoff) || {}).Einheit || '') : '') : '',
+        esc([r.Flaschen_Anzahl ? r.Flaschen_Anzahl + ' × ' + String(r.Nennfuellmenge_L).replace('.', ',') + ' l' : '', r.Analysewerte, r.Partner_Name_Anschrift, r.Notiz].filter(Boolean).join(' · ')), esc(r.Erfasst_von && r.Erfasst_von !== 'Web-App' ? r.Erfasst_von : '')]),
+        ['', '', '', 'Summe', fmtNum(rows.reduce((s, r) => s + (num(r.Zugang_L) || 0), 0), 1), fmtNum(rows.reduce((s, r) => s + (num(r.Abgang_L) || 0), 0), 1), '', '', '']);
+      if (k === 'kellerbuch') return printDoc('Kellerbuch', sub + (W ? ' · ' + esc(W + ' ' + weinName(W)) : ''), body);
+      const p = wein(W) || {};
+      const kv = [['Weinnummer', p.Weinnummer], ['Bezeichnung', p.Bezeichnung], ['Kategorie', p.Erzeugniskategorie], ['Jahrgang', p.Jahrgang], ['Rebsorte', p.Rebsorte], ['Herkunft', p.Herkunft], ['Lesedatum', fmtDate(p.Lesedatum)],
+        ['Mostgewicht', p.Mostgewicht_Oe ? p.Mostgewicht_Oe + ' °Oe' : ''], ['Bestand laut Kellerbuch', fmtL(bestand(W))], ['Im Fass', weinInFaessern(W).map(f => f.Behaelter_Nr + ' (' + fmtL(num(f.Fuellstand_L)) + ')').join(', ')]].filter(x => x[1]);
+      return printDoc('Weinkonto ' + W, esc(p.Bezeichnung || '') + ' · ' + sub, `<table class="pkv">${kv.map(x => `<tr><th>${x[0]}</th><td>${esc(x[1])}</td></tr>`).join('')}</table>` + body);
+    }
+    if (k === 'faesser') {
+      const list = [...S.snap.behaelter].sort((a, b) => a.Behaelter_Nr.localeCompare(b.Behaelter_Nr, 'de', { numeric: true }));
+      return printDoc('Fassliste', 'Stand ' + fmtDate(today()), ptable(['Fass', 'Bezeichnung', 'Material', 'Fassungsvermögen', 'Wein', 'Füllstand', 'seit'],
+        list.map(f => [esc(f.Behaelter_Nr), esc(f.Bezeichnung || ''), esc(f.Material || ''), fmtL(num(f.Fassungsvermoegen_L)), f.Aktuelle_Weinnummer ? esc(f.Aktuelle_Weinnummer + ' ' + weinName(f.Aktuelle_Weinnummer)) : 'leer', f.Aktuelle_Weinnummer ? fmtL(num(f.Fuellstand_L)) : '', fmtDate(f.Befuellt_am)])));
+    }
+    if (k === 'etiketten') return printEtiketten();
+    if (k === 'ps') {
+      const rows = S.snap.ps.filter(r => R.in(r.Datum)).sort((a, b) => String(a.Beginn || a.Datum).localeCompare(String(b.Beginn || b.Datum)));
+      const t = v => String(v || '').slice(11, 16);
+      return printDoc('Aufzeichnung Pflanzenschutzmittel-Anwendungen', sub + ' · Kultur: ' + KULTUR, ptable(['Datum', 'Zeit', 'Weinberg / Flurstück', 'Fläche ha', 'Mittel', 'Zul.-Nr.', 'Aufwand je ha', 'Menge', 'BBCH', 'Schaderreger', 'Anwender', 'Gerät'],
+        rows.map(r => [fmtDate(r.Datum), t(r.Beginn) + (r.Ende ? '–' + t(r.Ende) : ''), esc(r.Weinberg || '') + (r.Flurstueck ? '<br><small>' + esc(r.Flurstueck) + '</small>' : ''), fmtNum(r.Flaeche_ha, 4), esc(r.Mittel), esc(r.Zulassungsnummer || ''),
+          fmtNum(r.Aufwand_je_ha, 3) + ' ' + esc(r.Einheit || ''), fmtNum(r.Menge, 3) + ' ' + esc(r.Einheit || ''), esc(r.Entwicklungsstadium || ''), esc(r.Schaderreger || ''), esc(r.Anwender || ''), esc(r.Geraet || '')])));
+    }
+    if (k === 'tagebuch') {
+      const rows = S.snap.arbeiten.filter(a => R.in(a.Datum)).sort((a, b) => String(a.Datum).localeCompare(String(b.Datum)));
+      const h = new Map(); rows.forEach(a => { const key = a.Weinberg || ''; h.set(key, (h.get(key) || 0) + (num(a.Stunden) || 0)); });
+      return printDoc('Weinberg-Tagebuch', sub, ptable(['Datum', 'Weinberg', 'Arbeit', 'Art', 'Anteil', 'Stunden', 'Person', 'Notiz'],
+        rows.map(a => [fmtDate(a.Datum), esc(a.Weinberg || ''), esc(a.Arbeit), isSchlepper(a.Arbeit) ? 'Schlepper' : 'Hand', fmtNum(a.Anteil_Prozent, 0) + ' %', num(a.Stunden) ? fmtNum(a.Stunden) : '', esc(a.Person || ''), esc(a.Notiz || '')]))
+        + '<h2>Stunden je Weinberg</h2>' + ptable(['Weinberg', 'Stunden'], [...h.entries()].map(([k2, v]) => [esc(k2), fmtNum(v)]), ['Summe', fmtNum([...h.values()].reduce((s, v) => s + v, 0))]));
+    }
+    if (k === 'lese') {
+      const rows = S.snap.lesegut.filter(l => l.Lese_ID && R.in(l.Datum)).sort((a, b) => String(a.Datum).localeCompare(String(b.Datum)));
+      return printDoc('Lese-Übersicht', sub, ptable(['Datum', 'Weinberg', 'Herkunft', 'Rebsorte', 'Menge kg', '°Oe', '% vol', 'Verbleib', 'Weinnummer', 'Bemerkung'],
+        rows.map(l => [fmtDate(l.Datum), esc(l.Weinberg || ''), esc(l.Herkunft || ''), esc(l.Rebsorte || ''), fmtNum(l.Menge_kg, 0), l.Mostgewicht_Oe || '', l.Nat_Alkohol_vol || '', esc(l.Verbleib || ''), esc(l.Weinnummer || ''), esc(l.Bemerkung || '')]),
+        ['', '', '', 'Summe', fmtNum(rows.reduce((s, l) => s + (num(l.Menge_kg) || 0), 0), 0), '', '', '', '', '']));
+    }
+    if (k === 'weinberge') {
+      const list = wbList();
+      return printDoc('Weinbergsliste', 'Stand ' + fmtDate(today()), ptable(['Name', 'Lage', 'Gemarkung', 'Flur', 'Flurstück(e)', 'Rebsorte', 'Pflanzjahr', 'Fläche ha', 'Reihen', 'Zeilenbreite'],
+        list.map(w => [esc(w.Name), esc(w.Lage || ''), esc(w.Gemarkung || ''), esc(w.Flur || ''), esc(w.Flurstueck || ''), esc(w.Rebsorte || ''), w.Pflanzjahr || '', fmtNum(w.Flaeche_ha, 4), w.Reihen_Anzahl || '', w.Zeilenbreite_m ? fmtNum(w.Zeilenbreite_m, 2) + ' m' : '']),
+        ['Summe', '', '', '', '', '', '', fmtNum(list.reduce((s, w) => s + (num(w.Flaeche_ha) || 0), 0), 4), '', '']));
+    }
+    if (k === 'lager') return printLager(R);
+    if (k === 'bestellungen') {
+      const rows = S.snap.bestellungen.filter(b => R.in(b.Datum)).sort((a, b) => String(a.Datum).localeCompare(String(b.Datum)));
+      return printDoc('Bestellungen', sub, ptable(['Datum', 'Kunde', 'Weine', 'Summe', 'Status', 'Abgeholt', 'Bezahlt'],
+        rows.map(b => [fmtDate(b.Datum), esc(b.Kunde || ''), bestPos(b).map(p => `${p.n}× ${esc(p.name || artName(p.a))}`).join('<br>'), fmtEur(b.Summe), STATUS_TXT[bestStatus(b)], fmtDate(b.Abgeholt_am), fmtDate(b.Bezahlt_am)]),
+        ['', 'Summe (ohne storniert)', '', fmtEur(rows.filter(b => !b.Storniert_am).reduce((s, b) => s + (num(b.Summe) || 0), 0)), '', '', '']));
+    }
+  }
+  function printLager(R){
+    R = R || { v: '0000', b: '9999', in: () => true };
+    const list = aktiveArtikel();
+    const mv = S.snap.flaschen.filter(m => R.in(m.Datum)).sort((a, b) => String(a.Datum).localeCompare(String(b.Datum)));
+    printDoc('Flaschenlager', 'Bestand am ' + fmtDate(today()), ptable(['Wein', 'Weinnummer', 'Flasche', 'Bestand', 'reserviert', 'frei', 'Preis', 'Wert'],
+      list.map(a => { const b = bestandFl(a.Artikel_ID), r = reserviert(a.Artikel_ID); return [esc(a.Name), esc(a.Weinnummer || ''), a.Groesse_L ? fmtG(a.Groesse_L) : '', b, r || '', b - r, fmtEur(a.Preis), a.Preis ? fmtEur(b * a.Preis) : '']; }),
+      ['Summe', '', '', list.reduce((s, a) => s + bestandFl(a.Artikel_ID), 0), '', '', '', fmtEur(list.reduce((s, a) => s + bestandFl(a.Artikel_ID) * (num(a.Preis) || 0), 0))])
+      + (R.v !== '0000' ? `<h2>Bewegungen ${zr(R.v, R.b)}</h2>` + ptable(['Datum', 'Wein', 'Art', 'Anzahl', 'Kunde', 'Notiz', 'von'], mv.map(m => [fmtDate(m.Datum), esc(m.Artikel || artName(m.Artikel_ID)), esc(m.Art), num(m.Anzahl), esc(m.Kunde || ''), esc(m.Notiz || ''), esc(m.Erfasst_von || '')])) : ''));
+  }
+  function printBest(id){
+    const b = S.snap.bestellungen.find(x => x.Bestellung_ID === id); if (!b) return;
+    const k = kunde(b.Kunde_ID) || {}, pos = bestPos(b);
+    printDoc(b.Abgeholt_am ? 'Lieferschein' : 'Abholschein', `Nr. ${esc(b.Bestellung_ID)} · bestellt ${fmtDate(b.Datum)}${b.Abgeholt_am ? ' · abgeholt ' + fmtDate(b.Abgeholt_am) : ''}`,
+      `<div class="paddr"><b>${esc(b.Kunde || '')}</b>${k.Adresse ? '<br>' + esc(k.Adresse) : ''}${k.Telefon ? '<br>' + esc(k.Telefon) : ''}</div>`
+      + ptable(['Anzahl', 'Wein', 'Einzelpreis', 'Gesamt'], pos.map(p => [p.n, esc(p.name || artName(p.a)), fmtEur(p.p), p.p != null ? fmtEur(p.p * p.n) : '']), ['', 'Summe', '', fmtEur(b.Summe)])
+      + `<p class="pnote">${b.Bezahlt_am ? 'Bezahlt am ' + fmtDate(b.Bezahlt_am) + '.' : 'Noch nicht bezahlt.'} Dies ist keine Rechnung.</p>${b.Notiz ? `<p class="pnote">${esc(b.Notiz)}</p>` : ''}
+      <div class="psign"><div>Ware erhalten:</div><div class="line"></div><small>Datum, Unterschrift</small></div>`);
+  }
+  function printKunde(id){
+    const k = kunde(id); if (!k) return;
+    const bs = S.snap.bestellungen.filter(b => b.Kunde_ID === id && !b.Storniert_am).sort((a, b) => String(a.Datum).localeCompare(String(b.Datum)));
+    printDoc('Kaufübersicht ' + k.Name, [k.Telefon, k.EMail, k.Adresse].filter(Boolean).map(esc).join(' · '), ptable(['Datum', 'Weine', 'Summe', 'Abgeholt', 'Bezahlt'],
+      bs.map(b => [fmtDate(b.Datum), bestPos(b).map(p => `${p.n}× ${esc(p.name || artName(p.a))}`).join('<br>'), fmtEur(b.Summe), fmtDate(b.Abgeholt_am), fmtDate(b.Bezahlt_am)]),
+      ['Summe', '', fmtEur(bs.reduce((s, b) => s + (num(b.Summe) || 0), 0)), '', '']));
+  }
+  async function printEtiketten(){
+    const be = $('#pBetrieb'); if (be) { S.ui.betrieb = be.value.trim(); save(); }
+    try { await loadQRLib(); } catch (e) { return toast('Für die QR-Codes einmal mit Internet öffnen'); }
+    const base = location.origin + location.pathname;
+    const list = [...S.snap.behaelter].sort((a, b) => a.Behaelter_Nr.localeCompare(b.Behaelter_Nr, 'de', { numeric: true }));
+    const lab = f => { const qr = qrcode(0, 'M'); qr.addData(base + '#fass=' + encodeURIComponent(f.Behaelter_Nr)); qr.make();
+      return `<div class="lab"><div class="lq">${qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true })}</div><div class="lt"><div class="ln">${esc(f.Behaelter_Nr)}</div>
+        <div class="ld">${esc(f.Bezeichnung || '')}</div><div class="ld">${f.Fassungsvermoegen_L ? fmtL(num(f.Fassungsvermoegen_L)) : ''}${f.Material ? ' · ' + esc(f.Material) : ''}</div><div class="lb">${esc(S.ui.betrieb || '')}</div></div></div>`; };
+    const el = $('#printArea');
+    el.innerHTML = `<div class="labs">${list.map(lab).join('')}</div>`;
+    closeSheet();
+    setTimeout(() => { try { window.print(); } catch (e) {} }, 400);
   }
 
   /* ---------- Demo-Weinberge ---------- */
@@ -1946,7 +2416,8 @@ const App = (() => {
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 
-  return { init, go, aufgForm, aufgSave, aufgDone, aufgEintragen, saisonPick, setSaison, wbSorte, handPick, jobManual, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
+  return { init, go, openArtikel, artikelForm, artikelSave, artikelAus, flBuchen, flSave, bestForm, bestKunde, bestCalc, bestSave, openBest, bestAbgeholt, bestBezahlt, bestStorno,
+    openKunde, kundeForm, kundeSave, kSuche, verkaufNew, schnellVerkauf, leseForm, leseCheck, leseSave, printMenu, printRun, printLager: () => printLager(), printBest, printKunde, aufgForm, aufgSave, aufgDone, aufgEintragen, saisonPick, setSaison, wbSorte, handPick, jobManual, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
 })();
 App.init();
 </script>
