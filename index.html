@@ -1133,6 +1133,7 @@ const App = (() => {
     if (!y || y >= cur.y) return cur;
     return { iso: `${y}-11-01`, end: `${y+1}-11-01`, label: `Saison ${y}/${String(y+1).slice(2)}`, y, current: false }; }
   const inSaison = (d, sea) => { const x = String(d || '').slice(0, 10); return x >= sea.iso && x < sea.end; };
+  const saisonLabel = d => { const y = saisonOf(d); return `Saison ${y}/${String(y + 1).slice(2)}`; };
   const saisonOf = d => { const x = String(d || ''); const y = +x.slice(0, 4), m = +x.slice(5, 7); return m >= 11 ? y : y - 1; };
   function saisonList(){ const ys = new Set([saison().y]); S.snap.arbeiten.concat(S.snap.ps).forEach(a => { const y = saisonOf(a.Datum); if (y > 2000) ys.add(y); }); return [...ys].sort((a, b) => b - a); }
   function saisonPick(){
@@ -1437,7 +1438,8 @@ const App = (() => {
       <div class="wb-box" id="wbBox"></div>
       <p class="note" style="margin-top:8px" id="wbHelp">${wbUI.list ? '<b>Tippen</b> = ganze Reihe an/aus · <b>waagerecht ziehen</b> = nur ein Stück · hoch/runter = blättern.' : '<b>Quer</b> über die Reihen wischen = ganze Reihen · <b>längs</b> einer Reihe = nur ein Stück · <b>Tippen</b> = eine Reihe. Für einzelne Reihen und Stücke: „Einzeln“.'}</p>
       <form id="frm" onsubmit="event.preventDefault();App.wbSave()"><p id="frmErr" class="note warn" hidden></p>
-        <div class="two">${field('Datum', `<input name="Datum" type="date" value="${rv ? esc(rv.datum) : today()}">`)}${field('Stunden', inNum('Stunden', rv && rv.stunden ? rv.stunden : null, 'optional'))}</div>
+        <div class="two">${field('Datum', `<input name="Datum" type="date" value="${rv ? esc(rv.datum) : today()}" oninput="App.datSaisonHint(this)">`)}${field('Stunden', inNum('Stunden', rv && rv.stunden ? rv.stunden : null, 'optional'))}</div>
+        <p class="note warn" id="datHint" hidden></p>
         ${field('Notiz', inTxt('Notiz', '', 'optional'))}
         <div class="btnrow"><button class="btn sec small" type="button" onclick="App.wbAll()">Ganzer Weinberg</button></div>
         <div id="wbFertig"></div>
@@ -1560,7 +1562,8 @@ const App = (() => {
     const map = segsToRows(segs), rv = wbUI.review && wbUI.review.id === w.Weinberg_ID ? wbUI.review : null, id = rv ? rv.sid : uid();
     queueOp({ id, arbeiten: [{ Arbeit_ID: id, Datum: fd.Datum || today(), Weinberg_ID: w.Weinberg_ID, Weinberg: w.Name, Arbeit: wbUI.arbeit,
       Anteil_Prozent: +pctOf(f, map).toFixed(1), Reihen: JSON.stringify(segs), Stunden: num(fd.Stunden), Person: rv ? rv.person : (S.name || ''), Notiz: [rv ? rv.notiz : '', fd.Notiz || ''].filter(Boolean).join(' · '), Abgeschlossen: fd.fertig ? 'ja' : '', Erfasst_am: new Date().toISOString() }] },
-      fd.fertig && !segs.length ? `${wbUI.arbeit}: als abgeschlossen markiert` : `${wbUI.arbeit}: ${map.size} ${f.gasse ? 'Gassen' : f.seiten ? 'Laubwände' : 'Reihen'} gespeichert${fd.fertig ? ' · abgeschlossen' : ''}`);
+      !inSaison(fd.Datum || today(), selSaison()) ? `${wbUI.arbeit} gespeichert – Datum liegt in der ${saisonLabel(fd.Datum)}, dort unter „Saison“ zu sehen`
+      : fd.fertig && !segs.length ? `${wbUI.arbeit}: als abgeschlossen markiert` : `${wbUI.arbeit}: ${map.size} ${f.gasse ? 'Gassen' : f.seiten ? 'Laubwände' : 'Reihen'} gespeichert${fd.fertig ? ' · abgeschlossen' : ''}`);
     wbUI.marks = []; wbUI.erase = false;
     if (rv) { wbUI.review = null; S.ui.psReview = (S.ui.psReview || []).filter(x => x !== rv && x.sid !== rv.sid); save(); if (S.ui.psReview.length) return psReviewNext(); closeSheet(); tab = 'ps'; return render(); }
     openWeinberg(w.Weinberg_ID);
@@ -3002,7 +3005,7 @@ const App = (() => {
   }
 
   return { init, go, wbMapMe, wbMapFit, kEcken, kCutStart, kCutPick, restNeu, wbTab, wbAufgForm, wbAufgGps, wbAufgSave, wbAufgDone, fassView, planTap, planSide, planStart, planCancel, planDoor, planSave, pdfShare, openArtikel, artikelForm, artikelSave, artikelAus, flBuchen, flSave, bestForm, bestKunde, bestCalc, bestSave, openBest, bestAbgeholt, bestBezahlt, bestStorno,
-    openKunde, kundeForm, kundeSave, kSuche, verkaufNew, schnellVerkauf, leseForm, leseCheck, leseSave, printMenu, printRun, printLager: () => printLager(), printBest, printKunde, aufgForm, aufgSave, aufgDone, aufgEintragen, saisonPick, setSaison, wbSorte, handPick, jobManual, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, wbStandView, wbDrawNow: () => wbDraw(), openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
+    openKunde, kundeForm, kundeSave, kSuche, verkaufNew, schnellVerkauf, leseForm, leseCheck, leseSave, printMenu, printRun, printLager: () => printLager(), printBest, printKunde, aufgForm, aufgSave, aufgDone, aufgEintragen, saisonPick, setSaison, wbSorte, handPick, jobManual, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, wbStandView, datSaisonHint: el => { const h = $('#datHint'); if (!h) return; const off = el.value && !inSaison(el.value, selSaison()); h.hidden = !off; if (off) h.textContent = `Achtung: Das Datum gehört zur ${saisonLabel(el.value)} – der Eintrag erscheint dann nur dort (oben über „Saison“ auswählen).`; }, wbDrawNow: () => wbDraw(), openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
 })();
 App.init();
 </script>
