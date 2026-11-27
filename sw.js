@@ -1,5 +1,5 @@
 // Offline-Speicher für die App-Dateien. Daten laufen nie über diesen Cache.
-const CACHE = 'keller-v16';
+const CACHE = 'keller-v18';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
