@@ -264,6 +264,7 @@ textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px
 .chipradio span{display:inline-block;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:14px}
 .chipradio input:checked+span{background:var(--ink);color:#fff;border-color:var(--ink)}
 .wb-card .title .tbadge{vertical-align:2px}
+.kpt span{display:block;width:22px;height:22px;margin:4px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5)}
 </style>
 </head>
 <body>
@@ -1655,25 +1656,42 @@ const App = (() => {
     const polys = kPolys(), P = proj(polys.flat()), xys = polys.map(p => p.map(P.to));
     if (K.ang == null) { const big = xys.slice().sort((a, b) => areaM2(b) - areaM2(a))[0]; K.ang = longestEdgeAngle(big); }
     const a = K.ang * Math.PI / 180, nrm = [-Math.sin(a), Math.cos(a)], dir = [Math.cos(a), Math.sin(a)];
-    const rows = xys.flatMap(xy => genRows(xy, K.ang, K.sp, K.off));
+    let rows = xys.flatMap(xy => genRows(xy, K.ang, K.sp, K.off));
+    if (xys.length > 1) { // Reihen, die über eine Flurstücksgrenze laufen, wieder zu einer Reihe zusammenfügen
+      const a0 = K.ang * Math.PI / 180, nv = [-Math.sin(a0), Math.cos(a0)], dv = [Math.cos(a0), Math.sin(a0)];
+      const seg = rows.map(r => { const t1 = r[0][0]*dv[0] + r[0][1]*dv[1], t2 = r[1][0]*dv[0] + r[1][1]*dv[1]; return { s: r[0][0]*nv[0] + r[0][1]*nv[1], a: Math.min(t1, t2), b: Math.max(t1, t2) }; })
+        .sort((x, y) => (x.s - y.s) || (x.a - y.a));
+      const merged = [];
+      seg.forEach(g => { const l = merged[merged.length - 1]; if (l && Math.abs(l.s - g.s) < 0.05 && g.a - l.b < 1.5) l.b = Math.max(l.b, g.b); else merged.push(Object.assign({}, g)); });
+      rows = merged.map(g => [[nv[0]*g.s + dv[0]*g.a, nv[1]*g.s + dv[1]*g.a], [nv[0]*g.s + dv[0]*g.b, nv[1]*g.s + dv[1]*g.b]]);
+    }
     const key = r => [r[0][0]*nrm[0] + r[0][1]*nrm[1], Math.min(r[0][0]*dir[0] + r[0][1]*dir[1], r[1][0]*dir[0] + r[1][1]*dir[1])];
     rows.sort((x, y) => { const kx = key(x), ky = key(y); return (ky[0] - kx[0]) || (kx[1] - ky[1]); });
     return { rows: rows.map(r => [...P.from(r[0]), ...P.from(r[1])]), area: xys.reduce((s, xy) => s + areaM2(xy), 0) };
+  }
+  /* verschiebbarer Punkt: ziehen = verschieben, kurz antippen beim Umriss = Punkt löschen */
+  function dragPt(arr, i, color, shape, after){
+    const icon = L.divIcon({ className: 'kpt', html: `<span style="background:${color}"></span>`, iconSize: [30, 30], iconAnchor: [15, 15] });
+    const m = L.marker(arr[i], { icon, draggable: true, keyboard: false, autoPan: true }).addTo(K.lyr);
+    m.on('drag', e => { const ll = e.target.getLatLng(); arr[i] = [+ll.lat.toFixed(7), +ll.lng.toFixed(7)]; if (shape) shape.setLatLngs(arr); });
+    m.on('dragend', () => { if (after) after(); kDraw(); });
+    return m;
   }
   function kDraw(){
     if (!K || !K.map) return;
     K.lyr.clearLayers();
     const done = K.step !== 'umriss', polys = kPolys();
-    polys.forEach(p => L.polygon(p, { color: '#F5EFE6', weight: 2.5, fillColor: '#F0B35A', fillOpacity: done ? 0.06 : 0.25, dashArray: K.mode === 'hand' && !done ? '6 6' : null, interactive: false }).addTo(K.lyr));
-    if (K.step === 'umriss' && K.mode === 'hand') K.pts.forEach(p => L.circleMarker(p, { radius: 6, color: '#fff', weight: 2, fillColor: '#6E1F2F', fillOpacity: 1 }).addTo(K.lyr));
+    const handShape = K.step === 'umriss' && K.mode === 'hand' ? L.polygon(K.pts, { color: '#F5EFE6', weight: 2.5, fillColor: '#F0B35A', fillOpacity: 0.25, dashArray: '6 6', interactive: false }).addTo(K.lyr) : null;
+    if (!handShape) polys.forEach(p => L.polygon(p, { color: '#F5EFE6', weight: 2.5, fillColor: '#F0B35A', fillOpacity: done ? 0.06 : 0.25, interactive: false }).addTo(K.lyr));
+    if (handShape) K.pts.forEach((p, i) => dragPt(K.pts, i, '#6E1F2F', handShape));
     if (K.step === 'umriss' && K.hits) K.hits.forEach(h => L.polygon(h.poly, { color: '#5BC0EB', weight: 2, fillOpacity: .15, interactive: false }).addTo(K.lyr));
     if (K.step === 'teilen') {
       if (K.sideA) { K.sideA.forEach(q => L.polygon(q.poly, { color: '#F0B35A', weight: 2.5, fillColor: '#F0B35A', fillOpacity: .35, interactive: false }).addTo(K.lyr));
         K.sideB.forEach(q => L.polygon(q.poly, { color: '#5BC0EB', weight: 2.5, fillColor: '#5BC0EB', fillOpacity: .35, interactive: false }).addTo(K.lyr)); }
       else K.cutSrc.forEach(q => L.polygon(q.poly, { color: '#F5EFE6', weight: 2, fillOpacity: .15, interactive: false }).addTo(K.lyr));
-      if (K.cut.length) { if (K.cut.length === 2) L.polyline(K.cut, { color: '#E0413A', weight: 3, dashArray: '8 6' }).addTo(K.lyr); K.cut.forEach(p => L.circleMarker(p, { radius: 6, color: '#fff', weight: 2, fillColor: '#E0413A', fillOpacity: 1 }).addTo(K.lyr)); }
+      if (K.cut.length) { const ln = K.cut.length === 2 ? L.polyline(K.cut, { color: '#E0413A', weight: 3, dashArray: '8 6' }).addTo(K.lyr) : null; K.cut.forEach((p, i) => dragPt(K.cut, i, '#E0413A', ln, () => { if (K.cut.length === 2) kCutCalc(); })); }
     }
-    if (K.step === 'richtung' && K.line.length) { L.polyline(K.line, { color: '#F0B35A', weight: 4 }).addTo(K.lyr); K.line.forEach(p => L.circleMarker(p, { radius: 6, color: '#fff', weight: 2, fillColor: '#F0B35A', fillOpacity: 1 }).addTo(K.lyr)); }
+    if (K.step === 'richtung' && K.line.length) { const ln = L.polyline(K.line, { color: '#F0B35A', weight: 4 }).addTo(K.lyr); K.line.forEach((p, i) => dragPt(K.line, i, '#F0B35A', ln)); }
     let info = '';
     if (K.step === 'reihen' && polys.length) { const r = kRows(); K.rowsLL = r.rows; K.area = r.area;
       r.rows.forEach((x, i) => L.polyline([[x[0], x[1]], [x[2], x[3]]], { color: i === 0 ? '#F0B35A' : '#FFFFFF', weight: 2, opacity: .9, interactive: false }).addTo(K.lyr));
@@ -1696,7 +1714,8 @@ const App = (() => {
             ${K.parcels.length ? `<div class="card" style="margin-top:8px">${K.parcels.map((p, i) => `<div class="row"><div class="main"><div class="title">${p.gemarkung ? esc(p.gemarkung) + ' · Flur ' + esc(p.flur) + ' · ' : ''}${esc(p.nr)}</div><div class="sub">${[p.flaeche ? fmtNum(p.flaeche, 0) + ' m²' : '', esc(p.lage || ''), esc(p.nutzung || '')].filter(Boolean).join(' · ')}</div></div><button class="btn sec small" style="width:auto;margin:0" onclick="App.kDel(${i})">✕</button></div>`).join('')}</div>
               ${ha ? `<p class="note" style="margin:8px 0">Amtliche Fläche zusammen: <b>${fmtNum(ha / 10000, 4)} ha</b></p>` : ''}` : ''}`
           : `${msg}<div class="mapctl">${B('↶ Punkt zurück', 'App.kUndo()')}${B('📍 Mein Standort', 'App.kGps()')}</div>`) +
-        (polys.length ? `<div class="mapctl">${B('✂️ Flurstück teilen (z. B. 2 Rebsorten)', 'App.kCutStart()')}</div>` : '') +
+        (polys.length ? `<div class="mapctl">${B('✂️ Flurstück teilen (z. B. 2 Rebsorten)', 'App.kCutStart()')}${K.mode === 'flst' && K.parcels.length === 1 ? B('✏️ Ecken verschieben', 'App.kEcken()') : ''}</div>` : '') +
+        (K.mode === 'hand' && K.pts.length ? `<p class="note" style="margin:6px 0">Punkte kannst du mit dem Finger verschieben.</p>` : '') +
         `<button class="btn" onclick="App.kStep('richtung')" ${polys.length ? '' : 'disabled style="opacity:.45"'}>Weiter: Zeilenrichtung</button>`;
     } else if (K.step === 'teilen') {
       const ar = l => fmtNum(l.reduce((s2, p) => { const P = proj(p.poly); return s2 + areaM2(p.poly.map(P.to)); }, 0) / 10000, 3);
@@ -1739,7 +1758,8 @@ const App = (() => {
     const side = sg => src.map(p => { const q = clipHalf(p.poly.map(P.to), sg > 0 ? n : [-n[0], -n[1]], sg > 0 ? c : -c); return q ? Object.assign({}, p, { id: p.id + (sg > 0 ? '-a' : '-b'), poly: q.map(P.from), cut: true, flaeche: null }) : null; }).filter(Boolean);
     K.sideA = side(1); K.sideB = side(-1);
   }
-  function kCutStart(){ K.cutSrc = K.mode === 'hand' ? [{ id: 'hand', poly: K.pts }] : K.parcels.slice(); K.cut = []; K.sideA = K.sideB = null; K.step = 'teilen'; K.msg = ''; kDraw(); }
+  function kEcken(){ const p = K.parcels[0]; if (!p) return; K.handInfo = p.gemarkung ? Object.assign({}, p, { flaeche: null, cut: true }) : K.handInfo; K.pts = p.poly.map(x => x.slice()); K.mode = 'hand'; K.ang = null; K.msg = 'Ziehe die Ecken an die richtige Stelle. Antippen auf der Karte fügt einen Punkt am Ende an.'; kDraw(); }
+  function kCutStart(){ K.cutSrc = K.mode === 'hand' ? [Object.assign({}, K.handInfo || {}, { id: 'hand', poly: K.pts })] : K.parcels.slice(); K.cut = []; K.sideA = K.sideB = null; K.step = 'teilen'; K.msg = ''; kDraw(); }
   function kCutPick(which){
     const keep = which === 'A' ? K.sideA : K.sideB, rest = which === 'A' ? K.sideB : K.sideA;
     K.mode = 'flst'; K.parcels = keep; K.rest = rest && rest.length ? rest : null; K.ang = null; K.step = 'umriss';
@@ -1759,7 +1779,7 @@ const App = (() => {
   }
   function kSave(){
     const w = wbById(K.id); if (!w || !K.rowsLL) return;
-    const polys = kPolys(), alk = K.mode === 'flst' ? K.parcels.filter(p => p.gemarkung) : [];
+    const polys = kPolys(), alk = K.mode === 'flst' ? K.parcels.filter(p => p.gemarkung) : (K.handInfo ? [K.handInfo] : []);
     const alkHa = alk.reduce((s, p) => s + (p.flaeche || 0), 0) / 10000;
     const upd = Object.assign({}, w, { Umriss: JSON.stringify(polys.length === 1 ? polys[0] : polys), Reihen: JSON.stringify(K.rowsLL.map(r => r.map(v => +v.toFixed(7)))), Reihen_Anzahl: K.rowsLL.length,
       Zeilenrichtung_Grad: +K.ang.toFixed(2), Versatz_m: +K.off.toFixed(2), Zeilenbreite_m: K.sp,
@@ -1767,7 +1787,7 @@ const App = (() => {
     if (alk.length) { upd.Gemarkung = [...new Set(alk.map(p => p.gemarkung))].join(', '); upd.Flur = [...new Set(alk.map(p => p.flur))].join(', ');
       upd.Flurstueck = alk.map(p => p.nr).join(', '); if (!upd.Lage && alk[0].lage) upd.Lage = alk[0].lage; }
     delete upd._pending;
-    if (K.parcels.some(p => p.cut)) upd.Flaeche_ha = +(K.area / 10000).toFixed(4);
+    if (K.parcels.some(p => p.cut) || (K.mode === 'hand' && K.handInfo)) upd.Flaeche_ha = +(K.area / 10000).toFixed(4);
     queueOp({ weinberg: upd }, `${K.rowsLL.length} Reihen gespeichert`);
     const rest = K.rest; frameCache.clear(); try { K.map.remove(); } catch (e) {} K = null;
     if (rest) {
@@ -2854,7 +2874,7 @@ const App = (() => {
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 
-  return { init, go, kCutStart, kCutPick, restNeu, wbTab, wbAufgForm, wbAufgGps, wbAufgSave, wbAufgDone, fassView, planTap, planSide, planStart, planCancel, planDoor, planSave, pdfShare, openArtikel, artikelForm, artikelSave, artikelAus, flBuchen, flSave, bestForm, bestKunde, bestCalc, bestSave, openBest, bestAbgeholt, bestBezahlt, bestStorno,
+  return { init, go, kEcken, kCutStart, kCutPick, restNeu, wbTab, wbAufgForm, wbAufgGps, wbAufgSave, wbAufgDone, fassView, planTap, planSide, planStart, planCancel, planDoor, planSave, pdfShare, openArtikel, artikelForm, artikelSave, artikelAus, flBuchen, flSave, bestForm, bestKunde, bestCalc, bestSave, openBest, bestAbgeholt, bestBezahlt, bestStorno,
     openKunde, kundeForm, kundeSave, kSuche, verkaufNew, schnellVerkauf, leseForm, leseCheck, leseSave, printMenu, printRun, printLager: () => printLager(), printBest, printKunde, aufgForm, aufgSave, aufgDone, aufgEintragen, saisonPick, setSaison, wbSorte, handPick, jobManual, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
 })();
 App.init();
