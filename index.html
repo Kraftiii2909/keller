@@ -2243,11 +2243,13 @@ const App = (() => {
     const el = $('#printArea');
     el.innerHTML = `<div class="ph"><div><h1>${esc(title)}</h1><div class="psub">${sub || ''}</div></div><div class="pb">${esc(S.ui.betrieb || '')}<br><small>erstellt ${fmtDate(today())}${S.name ? ' von ' + esc(S.name) : ''}</small></div></div>${body}`;
     closeSheet();
-    setTimeout(() => { try { window.print(); } catch (e) { toast('Drucken wird hier nicht unterstützt'); } }, 350);
+    if (isIOS() || S.ui.pdfMode) return pdfShow(title);
+    try { window.print(); } catch (e) { pdfShow(title); }
   }
   const ptable = (head, rows, foot) => `<table class="pt"><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.length ? rows.map(r => `<tr>${r.map(c => `<td>${c == null ? '' : c}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${head.length}"><i>keine Einträge</i></td></tr>`}</tbody>${foot ? `<tfoot><tr>${foot.map(c => `<td>${c == null ? '' : c}</td>`).join('')}</tr></tfoot>` : ''}</table>`;
   const zr = (v, b) => v === '0000' ? 'gesamter Zeitraum' : `Zeitraum ${fmtDate(v)} – ${fmtDate(b)}`;
   function printMenu(){
+    loadQRLib().catch(() => {});
     const sea = selSaison(), von = sea.iso, bis = sea.current ? today() : String(+sea.iso.slice(0, 4) + 1) + '-10-31';
     const D = (k, t, d, extra = '') => `<button class="row" onclick="App.printRun('${k}')"><div class="main"><div class="title">${t}</div><div class="sub">${d}</div></div>${extra}</button>`;
     openSheet(`<h2>🖨️ Drucken / PDF</h2><p class="lead">Auf dem iPhone öffnet sich der Druckdialog – dort kannst du drucken oder über „Teilen → In Dateien sichern“ ein PDF speichern.</p>
@@ -2353,16 +2355,182 @@ const App = (() => {
   }
   async function printEtiketten(){
     const be = $('#pBetrieb'); if (be) { S.ui.betrieb = be.value.trim(); save(); }
-    try { await loadQRLib(); } catch (e) { return toast('Für die QR-Codes einmal mit Internet öffnen'); }
+    if (!window.qrcode) { try { await loadQRLib(); } catch (e) { return toast('Für die QR-Codes einmal mit Internet öffnen'); } }
     const base = location.origin + location.pathname;
     const list = [...S.snap.behaelter].sort((a, b) => a.Behaelter_Nr.localeCompare(b.Behaelter_Nr, 'de', { numeric: true }));
     const lab = f => { const qr = qrcode(0, 'M'); qr.addData(base + '#fass=' + encodeURIComponent(f.Behaelter_Nr)); qr.make();
-      return `<div class="lab"><div class="lq">${qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true })}</div><div class="lt"><div class="ln">${esc(f.Behaelter_Nr)}</div>
+      return `<div class="lab" data-url="${esc(base + '#fass=' + encodeURIComponent(f.Behaelter_Nr))}"><div class="lq">${qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true })}</div><div class="lt"><div class="ln">${esc(f.Behaelter_Nr)}</div>
         <div class="ld">${esc(f.Bezeichnung || '')}</div><div class="ld">${f.Fassungsvermoegen_L ? fmtL(num(f.Fassungsvermoegen_L)) : ''}${f.Material ? ' · ' + esc(f.Material) : ''}</div><div class="lb">${esc(S.ui.betrieb || '')}</div></div></div>`; };
     const el = $('#printArea');
     el.innerHTML = `<div class="labs">${list.map(lab).join('')}</div>`;
     closeSheet();
-    setTimeout(() => { try { window.print(); } catch (e) {} }, 400);
+    if (isIOS() || S.ui.pdfMode) return pdfShow('Fass-Etiketten');
+    try { window.print(); } catch (e) { pdfShow('Fass-Etiketten'); }
+  }
+
+  /* =====================================================================
+     PDF-Erzeugung im Gerät (für iPhone: dort kann eine Web-App nicht drucken)
+     Liest die fertige Druckansicht (#printArea) und baut daraus ein A4-PDF.
+     ===================================================================== */
+  const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let pdfFile = null;
+  function pdfEnc(str){
+    const map = { '€': 128, '‚': 130, '„': 132, '…': 133, '–': 150, '—': 151, '‘': 145, '’': 146, '“': 147, '”': 148, '•': 149, '™': 153 };
+    let out = '';
+    for (const ch of String(str)) {
+      let c = ch.codePointAt(0);
+      if (map[ch]) c = map[ch];
+      else if (ch === '→') { out += '->'; continue; }
+      else if (ch === '✓') { out += 'ok'; continue; }
+      else if (ch === ' ' || ch === ' ') c = 32;
+      else if (c > 255) continue; // Emojis & Co. weglassen
+      if (c === 40 || c === 41 || c === 92) out += '\\' + ch;
+      else if (c < 32) continue;
+      else if (c > 126) out += '\\' + c.toString(8).padStart(3, '0');
+      else out += ch;
+    }
+    return out;
+  }
+  const mctx = document.createElement('canvas').getContext('2d');
+  function tw(t, size, bold){ mctx.font = `${bold ? 'bold ' : ''}${size}px Helvetica, Arial, sans-serif`; return mctx.measureText(String(t).replace(/[^\u0000-ÿ€–—„“”‘’…•]/gu, '')).width; }
+  function wrap(text, w, size, bold){
+    const lines = [];
+    String(text).split('\n').forEach(par => {
+      const words = par.split(/\s+/).filter(Boolean); let cur = '';
+      if (!words.length) { lines.push(''); return; }
+      words.forEach(word => {
+        let t = cur ? cur + ' ' + word : word;
+        if (tw(t, size, bold) <= w) { cur = t; return; }
+        if (cur) lines.push(cur);
+        cur = word;
+        while (tw(cur, size, bold) > w && cur.length > 1) { let i = cur.length; while (i > 1 && tw(cur.slice(0, i), size, bold) > w) i--; lines.push(cur.slice(0, i)); cur = cur.slice(i); }
+      });
+      if (cur) lines.push(cur);
+    });
+    return lines.length ? lines : [''];
+  }
+  function cellText(el){ const c = el.cloneNode(true); c.querySelectorAll('br').forEach(b => b.replaceWith('\n')); return c.textContent.replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').trim(); }
+
+  function buildPdf(){
+    const area = $('#printArea'), W = 595.28, H = 841.89, M = 34, pages = [];
+    let cs = '', y = 0, pageNo = 0;
+    const head = { t: cellText(area.querySelector('.ph h1') || document.createElement('i')), s: cellText(area.querySelector('.psub') || document.createElement('i')),
+      b: (area.querySelector('.pb') || { childNodes: [] }).childNodes[0] ? String(area.querySelector('.pb').childNodes[0].textContent || '').trim() : '', e: cellText(area.querySelector('.pb small') || document.createElement('i')) };
+    const txt = (x, yy, s, size, bold, gray) => { cs += `BT ${gray ? '0.35 g ' : ''}/${bold ? 'F2' : 'F1'} ${size} Tf ${x.toFixed(2)} ${(H - yy).toFixed(2)} Td (${pdfEnc(s)}) Tj ET${gray ? ' 0 g' : ''}\n`; };
+    const line = (x1, y1, x2, y2, w = 0.5, g = 0.55) => { cs += `${g} G ${w} w ${x1.toFixed(2)} ${(H - y1).toFixed(2)} m ${x2.toFixed(2)} ${(H - y2).toFixed(2)} l S 0 G\n`; };
+    const rect = (x, yy, w, h, g) => { cs += `${g} g ${x.toFixed(2)} ${(H - yy - h).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re f 0 g\n`; };
+    const newPage = () => {
+      if (cs) pages.push(cs); cs = ''; pageNo++; y = M;
+      if (head.t) {
+        txt(M, y + 13, head.t, 15, true);
+        if (head.b) txt(W - M - tw(head.b, 10, true), y + 10, head.b, 10, true);
+        if (head.e) txt(W - M - tw(head.e, 7.5), y + 21, head.e, 7.5, false, true);
+        if (head.s) txt(M, y + 25, head.s, 8.5, false, true);
+        y += 31; line(M, y, W - M, y, 1.2, 0); y += 10;
+      }
+    };
+    const need = h => { if (y + h > H - M - 14) newPage(); };
+    newPage();
+    const avail = W - 2 * M;
+    const table = (tbl) => {
+      const hr = tbl.querySelector('thead tr'), heads = hr ? [...hr.children].map(cellText) : [];
+      const body = [...tbl.querySelectorAll('tbody tr')].map(tr => [...tr.children].map(cellText));
+      const foot = [...tbl.querySelectorAll('tfoot tr')].map(tr => [...tr.children].map(cellText));
+      const n = Math.max(heads.length, ...body.map(r => r.length), 1), fs = n > 9 ? 6.8 : n > 7 ? 7.5 : 8.3, lh = fs * 1.22, pad = 2.6;
+      // Spaltenbreiten: natürliche Breite, auf Seitenbreite skaliert, aber mindestens längstes Wort
+      const nat = [], minw = [];
+      for (let i = 0; i < n; i++) {
+        const cells = [heads[i] || ''].concat(body.map(r => r[i] || ''), foot.map(r => r[i] || ''));
+        nat[i] = Math.min(220, Math.max(...cells.map(c => Math.max(...String(c).split('\n').map(l => tw(l, fs, false))))) + 2 * pad);
+        minw[i] = Math.min(90, Math.max(...cells.map(c => Math.max(...String(c).split(/\s+/).map(wd => tw(wd, fs, true))))) + 2 * pad);
+      }
+      let tot = nat.reduce((s, v) => s + v, 0), ws = nat.map(v => v * avail / tot);
+      for (let k = 0; k < 3; k++) { let short = 0, free = 0; ws.forEach((v, i) => { if (v < minw[i]) { short += minw[i] - v; ws[i] = minw[i]; } else free += v - minw[i]; });
+        if (short && free) ws = ws.map((v, i) => v > minw[i] ? v - (v - minw[i]) * short / free : v); }
+      tot = ws.reduce((s, v) => s + v, 0); if (tot > avail) ws = ws.map(v => v * avail / tot);
+      const drawRow = (cells, bold, bg, topLine) => {
+        const ls = ws.map((w, i) => wrap(cells[i] || '', w - 2 * pad, fs, bold));
+        const h = Math.max(...ls.map(l => l.length)) * lh + 2 * pad;
+        if (y + h > H - M - 14) { newPage(); if (heads.length && !bg) drawRow(heads, true, 0.92); }
+        if (bg) rect(M, y, avail, h, bg);
+        let x = M;
+        ls.forEach((l, i) => { l.forEach((s, j) => txt(x + pad, y + pad + fs * 0.95 + j * lh, s, fs, bold)); x += ws[i]; });
+        line(M, y, M + avail, y, topLine ? 1.1 : 0.4, topLine ? 0 : 0.6);
+        x = M; ws.forEach(w => { line(x, y, x, y + h, 0.4, 0.6); x += w; }); line(M + avail, y, M + avail, y + h, 0.4, 0.6);
+        y += h; line(M, y, M + avail, y, 0.4, 0.6);
+      };
+      if (heads.length) drawRow(heads, true, 0.92);
+      body.forEach(r => drawRow(r, false));
+      foot.forEach(r => drawRow(r, true, 0, true));
+      y += 10;
+    };
+    const kv = (tbl) => { [...tbl.querySelectorAll('tr')].forEach(tr => { const k = cellText(tr.children[0]), v = cellText(tr.children[1] || tr.children[0]);
+      const ls = wrap(v, avail - 150, 9); need(ls.length * 11 + 2); txt(M, y + 9, k, 9, true); ls.forEach((s, j) => txt(M + 150, y + 9 + j * 11, s, 9)); y += ls.length * 11 + 2; }); y += 8; };
+    const para = (el, size = 9, bold = false) => { const ls = wrap(cellText(el), avail, size, bold); need(ls.length * size * 1.3); ls.forEach(s => { txt(M, y + size, s, size, bold); y += size * 1.3; }); y += 4; };
+    const labels = (box) => {
+      const items = [...box.querySelectorAll('.lab')], cw = avail / 2, ch = (H - 2 * M) / 4;
+      items.forEach((lab, i) => {
+        if (i && i % 8 === 0) newPage();
+        const k = i % 8, x0 = M + (k % 2) * cw, y0 = M + Math.floor(k / 2) * ch;
+        cs += `0.6 G 0.5 w [3 3] 0 d ${x0.toFixed(2)} ${(H - y0 - ch).toFixed(2)} ${cw.toFixed(2)} ${ch.toFixed(2)} re S [] 0 d 0 G\n`;
+        const url = lab.dataset.url, q = 120, qx = x0 + 12, qy = y0 + (ch - q) / 2;
+        if (url && window.qrcode) { const qr = qrcode(0, 'M'); qr.addData(url); qr.make(); const nmod = qr.getModuleCount(), s = q / nmod;
+          for (let r = 0; r < nmod; r++) for (let c = 0; c < nmod; c++) if (qr.isDark(r, c)) cs += `${(qx + c * s).toFixed(2)} ${(H - qy - (r + 1) * s).toFixed(2)} ${(s + 0.05).toFixed(2)} ${(s + 0.05).toFixed(2)} re f\n`; }
+        const tx = qx + q + 14; let ty = qy + 30;
+        txt(tx, ty, cellText(lab.querySelector('.ln')), 34, true); ty += 18;
+        lab.querySelectorAll('.ld').forEach(d => { const t = cellText(d); if (t) { txt(tx, ty, t, 10); ty += 13; } });
+        const bt = cellText(lab.querySelector('.lb') || document.createElement('i')); if (bt) txt(tx, qy + q - 4, bt, 8, false, true);
+      });
+    };
+    [...area.children].forEach(el => {
+      if (el.classList.contains('ph')) return;
+      if (el.classList.contains('labs')) return labels(el);
+      if (el.matches('table.pt')) return table(el);
+      if (el.matches('table.pkv')) return kv(el);
+      if (el.tagName === 'H2') { need(30); y += 4; para(el, 11.5, true); return; }
+      if (el.classList.contains('psign')) { need(60); y += 26; line(M, y, M + avail * 0.6, y, 0.8, 0); y += 10; txt(M, y, 'Datum, Unterschrift', 8, false, true); y += 12; return; }
+      if (el.classList.contains('paddr')) { cellText(el).split('\n').forEach((s, i) => { need(14); txt(M, y + 11, s, 11, i === 0); y += 14; }); y += 8; return; }
+      para(el);
+    });
+    pages.push(cs);
+    // Seitenzahlen
+    const total = pages.length;
+    const pagesFinal = pages.map((c, i) => c + (total > 1 ? `BT 0.35 g /F1 7.5 Tf ${(W - M - 40).toFixed(2)} ${(M - 14).toFixed(2)} Td (${pdfEnc('Seite ' + (i + 1) + ' von ' + total)}) Tj ET 0 g\n` : ''));
+    // PDF zusammensetzen
+    const objs = [];
+    const add = s => { objs.push(s); return objs.length; };
+    const cat = add(''), pgs = add('');
+    const f1 = add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+    const f2 = add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+    const kids = pagesFinal.map(c => { const cid = add(`<< /Length ${c.length} >>\nstream\n${c}endstream`);
+      return add(`<< /Type /Page /Parent ${pgs} 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 ${f1} 0 R /F2 ${f2} 0 R >> >> /Contents ${cid} 0 R >>`); });
+    objs[cat - 1] = `<< /Type /Catalog /Pages ${pgs} 0 R >>`;
+    objs[pgs - 1] = `<< /Type /Pages /Kids [${kids.map(k => k + ' 0 R').join(' ')}] /Count ${kids.length} >>`;
+    let pdf = '%PDF-1.4\n%âãÏÓ\n'; const off = [];
+    objs.forEach((o, i) => { off.push(pdf.length); pdf += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+    const xref = pdf.length;
+    pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + off.map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('');
+    pdf += `trailer\n<< /Size ${objs.length + 1} /Root ${cat} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+    const bytes = new Uint8Array(pdf.length); for (let i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 255;
+    return bytes;
+  }
+  function pdfShow(title){
+    let bytes; try { bytes = buildPdf(); } catch (e) { console.error(e); return toast('PDF konnte nicht erstellt werden: ' + e.message); }
+    const name = (title || 'Dokument').replace(/[^\wäöüÄÖÜß\- ]+/g, '').trim().replace(/\s+/g, '_') + '_' + today() + '.pdf';
+    pdfFile = new File([bytes], name, { type: 'application/pdf' });
+    const url = URL.createObjectURL(pdfFile);
+    openSheet(`<h2>📄 PDF ist fertig</h2><p class="lead">${esc(name)}</p>
+      <button class="btn" onclick="App.pdfShare()">Teilen · Drucken · In Dateien sichern</button>
+      <a class="btn sec" href="${url}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none">PDF ansehen</a>
+      <p class="note">Im Teilen-Menü findest du <b>Drucken</b> (AirPrint) und <b>In Dateien sichern</b>. Per Mail oder WhatsApp kannst du es auch direkt verschicken.</p>
+      <button class="btn sec" onclick="App.closeSheet()">Schließen</button>`);
+  }
+  async function pdfShare(){
+    if (!pdfFile) return;
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) await navigator.share({ files: [pdfFile], title: pdfFile.name });
+      else { const a = document.createElement('a'); a.href = URL.createObjectURL(pdfFile); a.download = pdfFile.name; document.body.appendChild(a); a.click(); a.remove(); }
+    } catch (e) { if (e.name !== 'AbortError') toast('Teilen nicht möglich – „PDF ansehen“ nutzen'); }
   }
 
   /* ---------- Demo-Weinberge ---------- */
@@ -2416,7 +2584,7 @@ const App = (() => {
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 
-  return { init, go, openArtikel, artikelForm, artikelSave, artikelAus, flBuchen, flSave, bestForm, bestKunde, bestCalc, bestSave, openBest, bestAbgeholt, bestBezahlt, bestStorno,
+  return { init, go, pdfShare, openArtikel, artikelForm, artikelSave, artikelAus, flBuchen, flSave, bestForm, bestKunde, bestCalc, bestSave, openBest, bestAbgeholt, bestBezahlt, bestStorno,
     openKunde, kundeForm, kundeSave, kSuche, verkaufNew, schnellVerkauf, leseForm, leseCheck, leseSave, printMenu, printRun, printLager: () => printLager(), printBest, printKunde, aufgForm, aufgSave, aufgDone, aufgEintragen, saisonPick, setSaison, wbSorte, handPick, jobManual, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
 })();
 App.init();
