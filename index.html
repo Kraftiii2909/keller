@@ -1243,8 +1243,9 @@ const App = (() => {
 
   /* ---------- Zeichnen ---------- */
   function wbSVG(w, o = {}){
-    const f = o.frame || frameFor(w, o.arbeit), base = f.base || f.rows, uw = f.seiten ? 0.42 : 1;
+    const f = o.frame || frameFor(w, o.arbeit);
     if (!f) return `<svg viewBox="0 0 100 60"><text x="50" y="34" text-anchor="middle" font-size="9" fill="#A99C92">noch keine Reihen</text></svg>`;
+    const base = f.base || f.rows, uw = f.seiten ? 0.42 : 1;
     const allP = f.polys.flat(), xs = allP.map(p => p[0]).concat(base.flatMap(r => [r.x0, r.x1])), ys = allP.map(p => p[1]).concat(base.map(r => r.y));
     const pad = f.sp * 1.2, x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad, W = Math.max(...xs) - x0 + pad, H = Math.max(...ys) - y0 + pad;
     const big = !!o.big, col = arbeitFarbe(o.arbeit);
@@ -1602,7 +1603,10 @@ const App = (() => {
     map.on('moveend', () => { if (K && K.map) { const c = map.getCenter(); S.ui.mapView = { c: [c.lat, c.lng], z: map.getZoom() }; save(); } });
     map.on('click', e => { const p = [+e.latlng.lat.toFixed(7), +e.latlng.lng.toFixed(7)];
       if (K.step === 'umriss') { if (K.mode === 'hand') { K.pts.push(p); kDraw(); } else kTap(p); }
-      else if (K.step === 'richtung') { K.line.push(p); if (K.line.length > 2) K.line = K.line.slice(-2); kDraw(); } });
+      else if (K.step === 'richtung') { K.line.push(p); if (K.line.length > 2) K.line = K.line.slice(-2); kDraw(); }
+      else if (K.step === 'teilen') {
+        if (K.cut.length === 2 && K.sideA) { const inA = K.sideA.some(q => inPoly(p, q.poly)), inB = K.sideB.some(q => inPoly(p, q.poly)); if (inA) return kCutPick('A'); if (inB) return kCutPick('B'); }
+        K.cut.push(p); if (K.cut.length > 2) K.cut = [p]; if (K.cut.length === 2) kCutCalc(); else K.sideA = K.sideB = null; kDraw(); } });
     setTimeout(() => map.invalidateSize(), 320);
     kDraw();
     if (auto && !polys.length && K.q.gem && K.q.nr) kSearch();
@@ -1663,12 +1667,19 @@ const App = (() => {
     polys.forEach(p => L.polygon(p, { color: '#F5EFE6', weight: 2.5, fillColor: '#F0B35A', fillOpacity: done ? 0.06 : 0.25, dashArray: K.mode === 'hand' && !done ? '6 6' : null, interactive: false }).addTo(K.lyr));
     if (K.step === 'umriss' && K.mode === 'hand') K.pts.forEach(p => L.circleMarker(p, { radius: 6, color: '#fff', weight: 2, fillColor: '#6E1F2F', fillOpacity: 1 }).addTo(K.lyr));
     if (K.step === 'umriss' && K.hits) K.hits.forEach(h => L.polygon(h.poly, { color: '#5BC0EB', weight: 2, fillOpacity: .15, interactive: false }).addTo(K.lyr));
+    if (K.step === 'teilen') {
+      if (K.sideA) { K.sideA.forEach(q => L.polygon(q.poly, { color: '#F0B35A', weight: 2.5, fillColor: '#F0B35A', fillOpacity: .35, interactive: false }).addTo(K.lyr));
+        K.sideB.forEach(q => L.polygon(q.poly, { color: '#5BC0EB', weight: 2.5, fillColor: '#5BC0EB', fillOpacity: .35, interactive: false }).addTo(K.lyr)); }
+      else K.cutSrc.forEach(q => L.polygon(q.poly, { color: '#F5EFE6', weight: 2, fillOpacity: .15, interactive: false }).addTo(K.lyr));
+      if (K.cut.length) { if (K.cut.length === 2) L.polyline(K.cut, { color: '#E0413A', weight: 3, dashArray: '8 6' }).addTo(K.lyr); K.cut.forEach(p => L.circleMarker(p, { radius: 6, color: '#fff', weight: 2, fillColor: '#E0413A', fillOpacity: 1 }).addTo(K.lyr)); }
+    }
     if (K.step === 'richtung' && K.line.length) { L.polyline(K.line, { color: '#F0B35A', weight: 4 }).addTo(K.lyr); K.line.forEach(p => L.circleMarker(p, { radius: 6, color: '#fff', weight: 2, fillColor: '#F0B35A', fillOpacity: 1 }).addTo(K.lyr)); }
     let info = '';
     if (K.step === 'reihen' && polys.length) { const r = kRows(); K.rowsLL = r.rows; K.area = r.area;
       r.rows.forEach((x, i) => L.polyline([[x[0], x[1]], [x[2], x[3]]], { color: i === 0 ? '#F0B35A' : '#FFFFFF', weight: 2, opacity: .9, interactive: false }).addTo(K.lyr));
       info = `<b>${r.rows.length} Reihen</b> · ${fmtNum(r.area / 10000, 3)} ha · Zeilenbreite ${fmtNum(K.sp, 2)} m · Winkel ${fmtNum(((K.ang % 180) + 180) % 180, 1)}°`; }
     const H = { umriss: K.mode === 'hand' ? 'Schritt 1/3: Tippe die Ecken des Weinbergs der Reihe nach an.' : 'Schritt 1/3: Flurstück eintragen und suchen – oder einfach auf der Karte auf das Flurstück tippen. Mehrere gehen auch.',
+      teilen: 'Teilen: Tippe zwei Punkte auf der Grenze zwischen den Rebsorten – am besten etwas außerhalb des Flurstücks, damit die Linie ganz durchgeht. Dann die Seite antippen, die zu diesem Weinberg gehört.',
       richtung: 'Schritt 2/3: Tippe zwei Punkte entlang einer Rebzeile (Anfang und Ende einer Reihe) – oder überspringen, dann nimmt die App die längste Kante.', reihen: 'Schritt 3/3: Passen die Reihen? Mit den Knöpfen ausrichten, bis die weißen Linien auf den Zeilen liegen.' };
     $('#kHint').textContent = H[K.step];
     const B = (t, f, on) => `<button type="button" class="${on ? 'on' : ''}" onclick="${f}">${t}</button>`;
@@ -1685,7 +1696,14 @@ const App = (() => {
             ${K.parcels.length ? `<div class="card" style="margin-top:8px">${K.parcels.map((p, i) => `<div class="row"><div class="main"><div class="title">${p.gemarkung ? esc(p.gemarkung) + ' · Flur ' + esc(p.flur) + ' · ' : ''}${esc(p.nr)}</div><div class="sub">${[p.flaeche ? fmtNum(p.flaeche, 0) + ' m²' : '', esc(p.lage || ''), esc(p.nutzung || '')].filter(Boolean).join(' · ')}</div></div><button class="btn sec small" style="width:auto;margin:0" onclick="App.kDel(${i})">✕</button></div>`).join('')}</div>
               ${ha ? `<p class="note" style="margin:8px 0">Amtliche Fläche zusammen: <b>${fmtNum(ha / 10000, 4)} ha</b></p>` : ''}` : ''}`
           : `${msg}<div class="mapctl">${B('↶ Punkt zurück', 'App.kUndo()')}${B('📍 Mein Standort', 'App.kGps()')}</div>`) +
+        (polys.length ? `<div class="mapctl">${B('✂️ Flurstück teilen (z. B. 2 Rebsorten)', 'App.kCutStart()')}</div>` : '') +
         `<button class="btn" onclick="App.kStep('richtung')" ${polys.length ? '' : 'disabled style="opacity:.45"'}>Weiter: Zeilenrichtung</button>`;
+    } else if (K.step === 'teilen') {
+      const ar = l => fmtNum(l.reduce((s2, p) => { const P = proj(p.poly); return s2 + areaM2(p.poly.map(P.to)); }, 0) / 10000, 3);
+      $('#kCtl').innerHTML = (K.sideA ? `<p class="note" style="margin:10px 0">Welche Seite gehört zu diesem Weinberg?</p>
+          <div class="mapctl"><button type="button" style="background:#F0B35A;color:#3A2A00;border-color:#F0B35A" onclick="App.kCutPick('A')">Orange · ${ar(K.sideA)} ha</button><button type="button" style="background:#5BC0EB;color:#05324A;border-color:#5BC0EB" onclick="App.kCutPick('B')">Blau · ${ar(K.sideB)} ha</button></div>`
+        : `<p class="note" style="margin:10px 0">${K.cut.length ? 'Noch einen zweiten Punkt antippen.' : 'Ersten Punkt der Trennlinie antippen.'}</p>`)
+        + `<div class="mapctl">${B('Linie neu', 'App.kCutStart()')}${B('Abbrechen', "App.kStep('umriss')")}</div>`;
     } else if (K.step === 'richtung') {
       $('#kCtl').innerHTML = `<div class="mapctl">${B('↶ Zurück zum Umriss', "App.kStep('umriss')")}</div><button class="btn" onclick="App.kStep('reihen')">${K.line.length === 2 ? 'Weiter: Reihen prüfen' : 'Überspringen (längste Kante)'}</button>`;
     } else {
@@ -1710,6 +1728,35 @@ const App = (() => {
       toast(`Punkt gesetzt (±${Math.round(p.coords.accuracy)} m)`); kDraw(); }, () => toast('Standort nicht verfügbar'), { enableHighAccuracy: true, timeout: 15000 });
   }
   function kAdj(k, v){ if (k === 'ang') K.ang += v; if (k === 'off') K.off += v; if (k === 'sp') K.sp = Math.max(0.8, +(K.sp + v).toFixed(2)); kDraw(); }
+  /* Flurstück teilen (z. B. zwei Rebsorten auf einem Flurstück) */
+  function clipHalf(xy, n, c){ const out = [];
+    for (let i = 0; i < xy.length; i++) { const A = xy[i], B = xy[(i + 1) % xy.length], da = A[0]*n[0] + A[1]*n[1] - c, db = B[0]*n[0] + B[1]*n[1] - c;
+      if (da >= 0) out.push(A); if ((da >= 0) !== (db >= 0)) { const t = da / (da - db); out.push([A[0] + (B[0]-A[0]) * t, A[1] + (B[1]-A[1]) * t]); } }
+    return out.length >= 3 && areaM2(out) > 2 ? out : null; }
+  function kCutCalc(){
+    const src = K.cutSrc, all = src.flatMap(p => p.poly), P = proj(all), a = P.to(K.cut[0]), b = P.to(K.cut[1]);
+    const d = [b[0]-a[0], b[1]-a[1]], n = [-d[1], d[0]], c = a[0]*n[0] + a[1]*n[1];
+    const side = sg => src.map(p => { const q = clipHalf(p.poly.map(P.to), sg > 0 ? n : [-n[0], -n[1]], sg > 0 ? c : -c); return q ? Object.assign({}, p, { id: p.id + (sg > 0 ? '-a' : '-b'), poly: q.map(P.from), cut: true, flaeche: null }) : null; }).filter(Boolean);
+    K.sideA = side(1); K.sideB = side(-1);
+  }
+  function kCutStart(){ K.cutSrc = K.mode === 'hand' ? [{ id: 'hand', poly: K.pts }] : K.parcels.slice(); K.cut = []; K.sideA = K.sideB = null; K.step = 'teilen'; K.msg = ''; kDraw(); }
+  function kCutPick(which){
+    const keep = which === 'A' ? K.sideA : K.sideB, rest = which === 'A' ? K.sideB : K.sideA;
+    K.mode = 'flst'; K.parcels = keep; K.rest = rest && rest.length ? rest : null; K.ang = null; K.step = 'umriss';
+    K.msg = `Geteilt: ${fmtNum(keep.reduce((s, p) => { const P = proj(p.poly); return s + areaM2(p.poly.map(P.to)); }, 0) / 10000, 3)} ha bleiben bei diesem Weinberg. Den Rest kannst du nach dem Speichern als neuen Weinberg anlegen.`;
+    kDraw();
+  }
+  function restNeu(){
+    const r = S.ui.restDraft; if (!r) return;
+    const fd = Object.fromEntries(new FormData($('#frm')).entries());
+    if (!fd.Name) return formError('Bitte einen Namen eintragen.');
+    const polys = r.polys, P = proj(polys.flat()), area = polys.reduce((s, pl) => s + areaM2(pl.map(P.to)), 0);
+    const w = { Weinberg_ID: 'WB-' + uid().slice(0, 8), Name: fd.Name.trim(), Rebsorte: fd.Rebsorte || '', Lage: r.Lage || '', Gemarkung: r.Gemarkung || '', Flur: r.Flur || '', Flurstueck: r.Flurstueck || '',
+      Flaeche_ha: +(area / 10000).toFixed(4), Zeilenbreite_m: r.sp || 2, Umriss: JSON.stringify(polys.length === 1 ? polys[0] : polys), Status: 'aktiv' };
+    delete S.ui.restDraft; save();
+    queueOp({ weinberg: w }, 'Weinberg angelegt'); frameCache.clear();
+    openKarte(w.Weinberg_ID);
+  }
   function kSave(){
     const w = wbById(K.id); if (!w || !K.rowsLL) return;
     const polys = kPolys(), alk = K.mode === 'flst' ? K.parcels.filter(p => p.gemarkung) : [];
@@ -1720,8 +1767,17 @@ const App = (() => {
     if (alk.length) { upd.Gemarkung = [...new Set(alk.map(p => p.gemarkung))].join(', '); upd.Flur = [...new Set(alk.map(p => p.flur))].join(', ');
       upd.Flurstueck = alk.map(p => p.nr).join(', '); if (!upd.Lage && alk[0].lage) upd.Lage = alk[0].lage; }
     delete upd._pending;
+    if (K.parcels.some(p => p.cut)) upd.Flaeche_ha = +(K.area / 10000).toFixed(4);
     queueOp({ weinberg: upd }, `${K.rowsLL.length} Reihen gespeichert`);
-    frameCache.clear(); try { K.map.remove(); } catch (e) {} K = null;
+    const rest = K.rest; frameCache.clear(); try { K.map.remove(); } catch (e) {} K = null;
+    if (rest) {
+      S.ui.restDraft = { polys: rest.map(p => p.poly), Gemarkung: upd.Gemarkung, Flur: upd.Flur, Flurstueck: upd.Flurstueck, Lage: upd.Lage, sp: upd.Zeilenbreite_m }; save();
+      return openSheet(`<h2>Den anderen Teil anlegen?</h2><p class="lead">Der abgeteilte Rest vom Flurstück ${esc(upd.Flurstueck || '')} wird ein eigener Weinberg – z. B. mit der anderen Rebsorte.</p>
+        <form id="frm" onsubmit="event.preventDefault();App.restNeu()"><p id="frmErr" class="note warn" hidden></p>
+        ${field('Name', inTxt('Name', (upd.Name || '') + ' 2', 'z. B. Deschenberg unten Riesling'))}${field('Rebsorte', inTxt('Rebsorte', ''))}
+        <button class="btn" type="submit">Anlegen & Reihen prüfen</button>
+        <button class="btn sec" type="button" onclick="App.openWeinberg('${esc(upd.Weinberg_ID)}')">Nein, danke</button></form>`);
+    }
     openWeinberg(upd.Weinberg_ID);
   }
 
@@ -2798,7 +2854,7 @@ const App = (() => {
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 
-  return { init, go, wbTab, wbAufgForm, wbAufgGps, wbAufgSave, wbAufgDone, fassView, planTap, planSide, planStart, planCancel, planDoor, planSave, pdfShare, openArtikel, artikelForm, artikelSave, artikelAus, flBuchen, flSave, bestForm, bestKunde, bestCalc, bestSave, openBest, bestAbgeholt, bestBezahlt, bestStorno,
+  return { init, go, kCutStart, kCutPick, restNeu, wbTab, wbAufgForm, wbAufgGps, wbAufgSave, wbAufgDone, fassView, planTap, planSide, planStart, planCancel, planDoor, planSave, pdfShare, openArtikel, artikelForm, artikelSave, artikelAus, flBuchen, flSave, bestForm, bestKunde, bestCalc, bestSave, openBest, bestAbgeholt, bestBezahlt, bestStorno,
     openKunde, kundeForm, kundeSave, kSuche, verkaufNew, schnellVerkauf, leseForm, leseCheck, leseSave, printMenu, printRun, printLager: () => printLager(), printBest, printKunde, aufgForm, aufgSave, aufgDone, aufgEintragen, saisonPick, setSaison, wbSorte, handPick, jobManual, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
 })();
 App.init();
