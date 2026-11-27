@@ -202,6 +202,10 @@ body.athome main{padding-bottom:30px}
 .startcard{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px 14px;text-align:left;display:flex;flex-direction:column;gap:2px;min-height:118px}
 .startcard span{font-size:30px}.startcard b{font-size:18px}.startcard small{color:var(--muted);font-size:13px;line-height:1.3}
 .startcard:first-child{grid-column:1/-1;background:linear-gradient(135deg,#4E7A35,#2C4D24);color:#fff;border:0}.startcard:first-child small{color:rgba(255,255,255,.8)}
+.saisonbtn{background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;color:var(--ink)}
+.running.archiv{background:#8A6A2E}
+#sheetBody:has(#archFlag) #wbTools,#sheetBody:has(#archFlag) #wbHelp,#sheetBody:has(#archFlag) #frm,#sheetBody:has(#archFlag) #wbGps,#sheetBody:has(#archFlag) .del{display:none}
+.archnote{background:#F3E7CC;border-radius:10px;padding:8px 10px}
 </style>
 </head>
 <body>
@@ -870,7 +874,23 @@ const App = (() => {
   const fmtNum = (v, d=1) => v == null ? '–' : (+v).toLocaleString('de-DE', { maximumFractionDigits: d });
   const fmtHa = v => v == null || v === '' ? '' : fmtNum(v, 2) + ' ha';
   const nowTime = () => new Date().toTimeString().slice(0,5);
-  function saison(){ const d = new Date(); const y = d.getMonth() >= 10 ? d.getFullYear() : d.getFullYear() - 1; return { iso: `${y}-11-01`, label: `Saison ${y}/${String(y+1).slice(2)}` }; }
+  function saison(){ const d = new Date(); const y = d.getMonth() >= 10 ? d.getFullYear() : d.getFullYear() - 1; return { iso: `${y}-11-01`, end: '9999', label: `Saison ${y}/${String(y+1).slice(2)}`, y, current: true }; }
+  /* Gewählte Saison (Archiv): 1. November bis 31. Oktober */
+  function selSaison(){ const cur = saison(), y = num(S.ui.saisonJahr);
+    if (!y || y >= cur.y) return cur;
+    return { iso: `${y}-11-01`, end: `${y+1}-11-01`, label: `Saison ${y}/${String(y+1).slice(2)}`, y, current: false }; }
+  const inSaison = (d, sea) => { const x = String(d || '').slice(0, 10); return x >= sea.iso && x < sea.end; };
+  const saisonOf = d => { const x = String(d || ''); const y = +x.slice(0, 4), m = +x.slice(5, 7); return m >= 11 ? y : y - 1; };
+  function saisonList(){ const ys = new Set([saison().y]); S.snap.arbeiten.concat(S.snap.ps).forEach(a => { const y = saisonOf(a.Datum); if (y > 2000) ys.add(y); }); return [...ys].sort((a, b) => b - a); }
+  function saisonPick(){
+    const cur = selSaison().y;
+    openSheet(`<h2>Saison wählen</h2><p class="lead">Eine Saison geht vom 1. November bis 31. Oktober. Ältere Saisons sind das Archiv – zum Ansehen.</p>
+      <div class="card">${saisonList().map((y, i) => `<button class="row" onclick="App.setSaison(${i === 0 ? 0 : y})"><div class="main"><div class="title">Saison ${y}/${String(y+1).slice(2)}${i === 0 ? ' · aktuell' : ''}</div>
+        <div class="sub">${S.snap.arbeiten.filter(a => saisonOf(a.Datum) === y).length} Arbeiten · ${new Set(S.snap.ps.filter(a => saisonOf(a.Datum) === y).map(a => a.Spritzung_ID || a.PS_ID)).size} Spritzungen</div></div>${y === cur ? '<b>✓</b>' : ''}</button>`).join('')}</div>`);
+  }
+  function setSaison(y){ S.ui.saisonJahr = y || 0; save(); closeSheet(); render(); }
+  function archivBanner(){ const sea = selSaison(); return sea.current ? '' : `<div class="running archiv">📦 <div style="flex:1"><b>Archiv: ${sea.label}</b><br><small>nur ansehen</small></div><button onclick="App.setSaison(0)">Aktuell</button></div>`; }
+  const saisonBtn = () => `<button class="saisonbtn" onclick="App.saisonPick()">${selSaison().label} ▾</button>`;
 
   /* ---------- Geometrie in lokalen Metern ---------- */
   function proj(pts){
@@ -970,10 +990,10 @@ const App = (() => {
     f.rows.forEach((r, i) => { tot += r.len; (rowsMap.get(i) || []).forEach(iv => cov += (iv[1] - iv[0]) * r.len); });
     return tot ? Math.min(100, 100 * cov / tot) : 0;
   }
-  function coverage(w, arbeit){
-    const since = saison().iso;
+  function coverage(w, arbeit, sea){
+    sea = sea || selSaison();
     const segs = [];
-    S.snap.arbeiten.filter(a => a.Weinberg_ID === w.Weinberg_ID && a.Arbeit === arbeit && String(a.Datum) >= since)
+    S.snap.arbeiten.filter(a => a.Weinberg_ID === w.Weinberg_ID && a.Arbeit === arbeit && inSaison(a.Datum, sea))
       .forEach(a => jparse(a.Reihen, []).forEach(s => segs.push(s)));
     const map = segsToRows(segs);
     return { map, pct: pctOf(frameFor(w, arbeit), map) };
@@ -1018,7 +1038,11 @@ const App = (() => {
     return `<div class="running">💧 <div onclick="App.go('ps')" style="flex:1"><b>Spritzung ${d.trk && d.trk.paused ? 'pausiert' : 'läuft'}</b><br><small>seit ${esc(d.beginn)} Uhr${d.trk ? ' · GPS' : ''} · ${esc((d.wbNames || []).join(', '))}</small></div><button onclick="App.psForm(true)">Beenden</button></div>`;
   }
   function viewWB(){
-    const list = wbList(), A = wbUI.arbeit;
+    const all = wbList(), A = wbUI.arbeit;
+    const sorten = [...new Set(all.map(w => String(w.Rebsorte || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
+    if (S.ui.wbSorte && !sorten.includes(S.ui.wbSorte)) S.ui.wbSorte = '';
+    const list = S.ui.wbSorte ? all.filter(w => String(w.Rebsorte || '').trim() === S.ui.wbSorte) : all;
+    const sortChips = sorten.length > 1 ? `<div class="chiplbl">🍇 Rebsorte</div><div class="chips">${['', ...sorten].map(v => `<button type="button" class="${(S.ui.wbSorte || '') === v ? 'on' : ''}" onclick="App.wbSorte('${esc(v)}')">${v ? esc(v) : 'Alle'}</button>`).join('')}</div>` : '';
     const ha = list.reduce((s, w) => s + (num(w.Flaeche_ha) || 0), 0);
     let tot = 0, cov = 0;
     const rows = list.map(w => {
@@ -1031,20 +1055,22 @@ const App = (() => {
         <div class="bar"><i style="width:${c.pct.toFixed(1)}%;background:${arbeitFarbe(A)}"></i></div></div>
         <div class="right">${Math.round(c.pct)} %</div></button>`;
     }).join('');
-    return `${runningBanner()}<div class="section-title"><h2>Weinberge</h2><small>${list.length} · ${fmtHa(ha) || '0 ha'}</small></div>
-      ${arbeitChips(A, 'wbViewArbeit')}
-      <div class="prog" style="margin-top:0"><span>${esc(A)} · ${saison().label}</span><b>${tot ? Math.round(100 * cov / tot) : 0} %</b></div>
+    return `${runningBanner()}${archivBanner()}<div class="section-title"><h2>Weinberge</h2>${saisonBtn()}</div>
+      ${sortChips}${arbeitChips(A, 'wbViewArbeit')}
+      <div class="prog" style="margin-top:0"><span>${esc(A)} · ${list.length} Weinberg${list.length === 1 ? '' : 'e'} · ${fmtHa(ha) || '0 ha'}</span><b>${tot ? Math.round(100 * cov / tot) : 0} %</b></div>
       <div class="card">${rows || '<div class="empty">Noch kein Weinberg angelegt.</div>'}</div>
       <button class="btn sec" style="margin-top:14px" onclick="App.wbEdit()">+ Weinberg anlegen</button>`;
   }
+  function wbSorte(v){ S.ui.wbSorte = v; save(); render(); }
   function bookFilter(k){ S.ui.bookFilter = k; save(); render(); }
   function wbViewArbeit(a){ wbUI.arbeit = a; render(); }
 
   function viewWBBuch(){
     const F = S.ui.bookFilter || 'alle';
     const fbar = `<div class="mapctl">${[['alle', 'Alle'], ['h', '✋ Hand'], ['s', '🚜 Schlepper']].map(([k, t]) => `<button type="button" class="${F === k ? 'on' : ''}" onclick="App.bookFilter('${k}')">${t}</button>`).join('')}</div>`;
-    const list = [...S.snap.arbeiten].filter(a => F === 'alle' || (F === 'h') !== isSchlepper(a.Arbeit)).sort((a, b) => String(b.Datum).localeCompare(String(a.Datum)) || String(b.Erfasst_am || '').localeCompare(String(a.Erfasst_am || '')));
-    if (!list.length) return `${runningBanner()}<div class="section-title"><h2>Tagebuch</h2></div>${fbar}<div class="empty">Noch keine Arbeiten eingetragen.<br>Weinberg öffnen und über die Reihen wischen.</div>`;
+    const sea = selSaison();
+    const list = [...S.snap.arbeiten].filter(a => inSaison(a.Datum, sea) && (F === 'alle' || (F === 'h') !== isSchlepper(a.Arbeit))).sort((a, b) => String(b.Datum).localeCompare(String(a.Datum)) || String(b.Erfasst_am || '').localeCompare(String(a.Erfasst_am || '')));
+    if (!list.length) return `${runningBanner()}${archivBanner()}<div class="section-title"><h2>Tagebuch</h2>${saisonBtn()}</div>${fbar}<div class="empty">Noch keine Arbeiten eingetragen.<br>Weinberg öffnen und über die Reihen wischen.</div>`;
     let html = '', day = '';
     list.forEach(a => {
       const d = fmtDate(a.Datum);
@@ -1054,7 +1080,7 @@ const App = (() => {
         <div class="title">${isSchlepper(a.Arbeit) ? '🚜' : '✋'} ${esc(a.Arbeit)} · ${esc(a.Weinberg || (wbById(a.Weinberg_ID) || {}).Name || '')}</div><div class="sub">${bits.join(' · ')}</div>
         ${a._pending ? '<div class="pending">⟳ wartet auf Übertragung</div>' : ''}</div></button>`;
     });
-    return `${runningBanner()}<div class="section-title"><h2>Tagebuch</h2><small>${list.length} Einträge</small></div>${fbar}` + html + '</div>';
+    return `${runningBanner()}${archivBanner()}<div class="section-title"><h2>Tagebuch</h2>${saisonBtn()}</div>${fbar}<p class="note" style="margin:0 2px 8px">${list.length} Einträge</p>` + html + '</div>';
   }
 
   function handPick(){
@@ -1083,12 +1109,15 @@ const App = (() => {
     wbUI.list = !!S.ui.wbList;
     wbUI.id = id;
     const f = frame(w);
-    const hist = S.snap.arbeiten.filter(a => a.Weinberg_ID === id).sort((a, b) => String(b.Datum).localeCompare(String(a.Datum))).slice(0, 30);
+    const sea = selSaison(), arch = !sea.current && !wbUI.review;
+    if (arch) { wbUI.list = false; wbUI.marks = []; }
+    const hist = S.snap.arbeiten.filter(a => a.Weinberg_ID === id && inSaison(a.Datum, sea)).sort((a, b) => String(b.Datum).localeCompare(String(a.Datum))).slice(0, 30);
     openSheet(`<h2>${esc(w.Name)}</h2>
       <p class="lead">${[esc(w.Lage || ''), w.Flurstueck ? 'Flst. ' + esc(w.Flurstueck) : '', esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f ? f.rows.length + ' Reihen' : ''].filter(Boolean).join(' · ')}</p>
       ${rv ? `<div class="running" style="background:#E7F0F8;color:var(--ink)">📍 <div><b>GPS-Spuren: ${esc(rv.arbeit || 'Pflanzenschutz')}</b><br><small>Prüfen, mit „Einzeln“ oder „Radieren“ korrigieren, dann speichern. ${(S.ui.psReview || []).length > 1 ? `(noch ${S.ui.psReview.length - 1} weitere)` : ''}</small></div></div>` : ''}
       ${f ? `${rv ? '' : arbeitChips(wbUI.arbeit, 'wbArbeit')}
       <div class="prog" id="wbProg"></div><div id="wbGps"></div>
+      ${arch ? `<p class="note archnote" id="archFlag">📦 Archiv ${sea.label} – nur ansehen. <a href="#" onclick="event.preventDefault();App.setSaison(0)">Zur aktuellen Saison</a></p>` : ''}
       <div class="mapctl" id="wbTools"><button type="button" data-v="map" onclick="App.wbView('map')">Übersicht</button><button type="button" data-v="list" onclick="App.wbView('list')">Einzeln</button>
         <button type="button" id="wbErase" onclick="App.wbEraseToggle()">🧽 Radieren</button><button type="button" id="wbUndoBtn" onclick="App.wbUndo()">↶</button></div>
       <div class="wb-box" id="wbBox"></div>
@@ -1100,12 +1129,12 @@ const App = (() => {
         <button class="btn" type="submit" id="wbSaveBtn">Speichern</button></form>`
       : `<p class="note">Für diesen Weinberg sind noch keine Reihen angelegt. Zeichne den Umriss auf der Karte – oder trag unter „Daten bearbeiten“ einfach die Anzahl der Reihen ein.</p>`}
       <div class="btnrow"><button class="btn sec small" onclick="App.openKarte('${esc(id)}')">🗺️ Umriss & Reihen</button><button class="btn sec small" onclick="App.wbEdit('${esc(id)}')">✏️ Daten bearbeiten</button></div>
-      ${hist.length ? `<div class="log-day" style="margin-top:16px">Letzte Arbeiten</div><div class="card">${hist.map(a => `<div class="row"><span class="swatch" style="background:${arbeitFarbe(a.Arbeit)}"></span><div class="main"><div class="title">${esc(a.Arbeit)}</div><div class="sub">${fmtDate(a.Datum)} · ${fmtNum(a.Anteil_Prozent, 0)} %${num(a.Stunden) ? ' · ' + fmtNum(a.Stunden) + ' h' : ''}${a.Person ? ' · ' + esc(a.Person) : ''}${a.Notiz ? ' · ' + esc(a.Notiz) : ''}</div></div>${a.Arbeit === 'Pflanzenschutz' ? '' : `<button class="btn sec small del" onclick="App.wbDelArbeit('${esc(a.Arbeit_ID)}',this)">🗑</button>`}</div>`).join('')}</div>` : ''}`);
+      ${hist.length ? `<div class="log-day" style="margin-top:16px">Arbeiten ${sea.label}</div><div class="card">${hist.map(a => `<div class="row"><span class="swatch" style="background:${arbeitFarbe(a.Arbeit)}"></span><div class="main"><div class="title">${esc(a.Arbeit)}</div><div class="sub">${fmtDate(a.Datum)} · ${fmtNum(a.Anteil_Prozent, 0)} %${num(a.Stunden) ? ' · ' + fmtNum(a.Stunden) + ' h' : ''}${a.Person ? ' · ' + esc(a.Person) : ''}${a.Notiz ? ' · ' + esc(a.Notiz) : ''}</div></div>${a.Arbeit === 'Pflanzenschutz' ? '' : `<button class="btn sec small del" onclick="App.wbDelArbeit('${esc(a.Arbeit_ID)}',this)">🗑</button>`}</div>`).join('')}</div>` : ''}`);
     if (f) { gpsBtn(); wbDraw(); }
   }
   function wbArbeit(a){ if (isGasse(a) !== isGasse(wbUI.arbeit)) wbUI.marks = []; wbUI.arbeit = a; document.querySelectorAll('#sheetBody .chips button').forEach(b => b.classList.toggle('on', b.textContent.trim() === a)); gpsBtn(); wbDraw(); }
   function gpsBtn(){ const el = $('#wbGps'); if (!el) return; const a = wbUI.arbeit;
-    el.innerHTML = !isSchlepper(a) || wbUI.review ? '' : a === 'Pflanzenschutz' ? `<button class="btn sec" onclick="App.psForm()">💧 Spritzung planen & mit GPS starten</button>`
+    el.innerHTML = !isSchlepper(a) || wbUI.review || !selSaison().current ? '' : a === 'Pflanzenschutz' ? `<button class="btn sec" onclick="App.psForm()">💧 Spritzung planen & mit GPS starten</button>`
       : `<button class="btn sec" onclick="App.jobForm('${a}')">🚜 ${esc(a)} mit GPS aufzeichnen</button>`; }
   /* Markierungen: Liste von Gesten {segs, erase}; daraus die Netto-Markierung */
   function subIv(iv, a, b){ const out = []; iv.forEach(([x, y]) => { if (y <= a || x >= b) out.push([x, y]); else { if (x < a) out.push([x, a]); if (y > b) out.push([b, y]); } }); return out.filter(v => v[1] - v[0] > 0.005); }
@@ -1130,7 +1159,7 @@ const App = (() => {
     const w = wbById(wbUI.id), f = frameFor(w, wbUI.arbeit), box = $('#wbBox'); if (!box || !f) return;
     const cov = coverage(w, wbUI.arbeit), segs = netSegs(), neu = new Set(segs.map(s => s[0]));
     const add = pctOf(f, segsToRows(Array.from(cov.map.entries()).flatMap(([i, iv]) => iv.map(x => [i, x[0], x[1]])).concat(segs))) - cov.pct;
-    $('#wbProg').innerHTML = `<span>${esc(wbUI.arbeit)} · ${saison().label}</span><span>${segs.length ? `<span style="color:${arbeitFarbe(wbUI.arbeit)};font-weight:700">+${Math.max(0, add).toFixed(0)} % neu</span> · ` : ''}<b>${Math.round(cov.pct)} %</b></span>`;
+    $('#wbProg').innerHTML = `<span>${esc(wbUI.arbeit)} · ${selSaison().label}</span><span>${segs.length ? `<span style="color:${arbeitFarbe(wbUI.arbeit)};font-weight:700">+${Math.max(0, add).toFixed(0)} % neu</span> · ` : ''}<b>${Math.round(cov.pct)} %</b></span>`;
     document.querySelectorAll('#wbTools button[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === (wbUI.list ? 'list' : 'map')));
     const er = $('#wbErase'); if (er) er.classList.toggle('on', !!wbUI.erase);
     const und = $('#wbUndoBtn'); if (und) und.disabled = !wbUI.marks.length;
@@ -1139,7 +1168,7 @@ const App = (() => {
     if (wbUI.list) return drawList(w, f, cov);
     const bf = bigFrame(f, Math.max(200, box.clientWidth - 16));
     box.innerHTML = wbSVG(w, { big: true, arbeit: wbUI.arbeit, cov, marks: [segs], frame: bf.f });
-    bindSwipe(bf.f);
+    if (!$('#archFlag')) bindSwipe(bf.f);
   }
   /* Reihe für Reihe: große Balken, Tippen = ganze Reihe an/aus, waagerecht ziehen = Stück */
   function drawList(w, f, cov){
@@ -1449,7 +1478,8 @@ const App = (() => {
   /* ---------- Pflanzenschutz ---------- */
   function viewPS(){
     const groups = new Map();
-    [...S.snap.ps].sort((a, b) => String(b.Datum).localeCompare(String(a.Datum)) || String(b.Beginn).localeCompare(String(a.Beginn))).forEach(r => {
+    const sea = selSaison();
+    [...S.snap.ps].filter(r => inSaison(r.Datum, sea)).sort((a, b) => String(b.Datum).localeCompare(String(a.Datum)) || String(b.Beginn).localeCompare(String(a.Beginn))).forEach(r => {
       const k = r.Spritzung_ID || r.PS_ID; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
     const cards = Array.from(groups.values()).map(rs => {
       const r0 = rs[0], wbs = [...new Set(rs.map(r => r.Weinberg))], mittel = new Map();
@@ -1466,12 +1496,12 @@ const App = (() => {
     const busy = S.ui.job || S.ui.psDraft;
     return `${runningBanner()}${curJob() ? `<div class="liveslot">${liveHTML()}</div>` : ''}
       ${(S.ui.psReview || []).length ? `<button class="btn" style="margin-bottom:14px" onclick="App.psReviewNext()">GPS-Spuren prüfen (${S.ui.psReview.length} Weinberg${S.ui.psReview.length === 1 ? '' : 'e'})</button>` : ''}
-      <div class="section-title"><h2>Arbeiten</h2><small>${saison().label}</small></div>
-      ${busy ? '' : `<div class="startgrid">
-        <button class="startcard" onclick="App.jobForm()"><span>🚜</span><b>Schlepper</b><small>mit GPS aufzeichnen</small></button>
-        <button class="startcard ps" onclick="App.psForm()"><span>💧</span><b>Spritzen</b><small>rechnen, starten, dokumentieren</small></button>
+      ${archivBanner()}<div class="section-title"><h2>Arbeiten</h2>${saisonBtn()}</div>
+      ${busy || !selSaison().current ? '' : `<div class="startgrid">
+        <button class="startcard" onclick="App.jobForm()"><span>🚜</span><b>Schlepper</b><small>mit GPS aufzeichnen oder von Hand eintragen</small></button>
+        <button class="startcard ps" onclick="App.psForm()"><span>💧</span><b>Pflanzenschutz</b><small>rechnen, spritzen, dokumentieren</small></button>
         <button class="startcard hand" onclick="App.handPick()"><span>✋</span><b>Handarbeit</b><small>Weinberg wählen, Reihen markieren</small></button></div>`}
-      <div class="section-title" style="margin-top:22px"><h2>💧 Spritz-Dokumentation</h2><small>${groups.size}</small></div>
+      <div class="section-title" style="margin-top:22px"><h2>💧 Pflanzenschutz-Doku</h2><small>${groups.size}</small></div>
       <div class="card">${cards || '<div class="empty">Noch keine Spritzung dokumentiert.</div>'}</div>
       <div class="section-title" style="margin-top:22px"><h2>Mittel</h2><small>${ml.length}</small></div>
       <div class="card">${ml.map(m => `<button class="row" onclick="App.mittelForm('${esc(m.Mittel)}')"><div class="main"><div class="title">${esc(m.Mittel)}</div>
@@ -1517,7 +1547,7 @@ const App = (() => {
         <div class="two">${field('Fläche gesamt (ha)', inNum('flaeche', v.flaeche ?? null, 'automatisch'))}${field('Faktor', inNum('faktor', v.faktor ?? 1), '(Entw.-Stadium)')}</div>
         <div class="two">${field('Wasser (L/ha)', inNum('wasser', v.wasser ?? (S.ui.wasser || 400)))}${field('Tank (L)', inNum('tank', v.tank ?? (S.ui.tank || 1000)))}</div>
         <label style="display:block;font-size:13px;font-weight:600;color:#5E4B42;margin:0 2px 5px">Mittel und Basisaufwand je ha</label>${lines}
-        ${ml.length ? '' : '<p class="note">Noch keine Mittel angelegt – unter „Spritzen“ → „Mittel anlegen“.</p>'}
+        ${ml.length ? '' : '<p class="note">Noch keine Mittel angelegt – unter „Arbeiten“ → „Mittel anlegen“.</p>'}
         <div class="card" style="padding:10px 12px;margin:6px 0 14px" id="psOut"></div>
         <div class="two">${field('BBCH / Stadium', inTxt('bbch', v.bbch, 'z. B. 57'))}${field('Schaderreger', inTxt('schad', v.schad, 'z. B. Peronospora'))}</div>
         <div class="two">${field('Gerät', inTxt('geraet', v.geraet ?? S.ui.geraet, 'Sprühgerät'))}${field('Anwender', inTxt('anwender', v.anwender ?? S.name))}</div>
@@ -1705,7 +1735,7 @@ const App = (() => {
     if (here) {
       const r = trackSegs(here, t.pts, t.wirkung, A), f0 = frame(here), f = frameFor(here, A), bf = bigFrame(f, Math.min(window.innerWidth, 560) - 64);
       const q = f0.toF([g.lat, g.lng]);
-      pic = `<div class="wb-box" style="touch-action:auto">${wbSVG(here, { big: true, arbeit: A, cov: coverage(here, A), marks: [r.segs], frame: bf.f, dot: [q[0], q[1] * bf.k] })}</div>
+      pic = `<div class="wb-box" style="touch-action:auto">${wbSVG(here, { big: true, arbeit: A, cov: coverage(here, A, saison()), marks: [r.segs], frame: bf.f, dot: [q[0], q[1] * bf.k] })}</div>
         <div class="prog"><span><b>${esc(here.Name)}</b> · ${r.passes} Gasse${r.passes === 1 ? '' : 'n'} heute</span><b>${Math.round(r.pct || 0)} %</b></div>`;
     } else pic = `<p class="note" style="margin:12px 0">${g && g.err ? '⚠️ ' + esc(g.err) : g ? 'Du bist gerade in keinem angelegten Weinberg.' : 'Warte auf GPS …'}</p>`;
     const acc = g && g.acc != null ? `GPS ±${Math.round(g.acc)} m${g.acc > 25 ? ' – zu ungenau, wird nicht aufgezeichnet' : ''}` : '';
@@ -1731,14 +1761,23 @@ const App = (() => {
       <form id="frm" onsubmit="event.preventDefault();App.jobStart()"><p id="frmErr" class="note warn" hidden></p>
         <div class="checks jobpick" onchange="App.jobWirk()">${list.map(([n, c, k]) => `<label><input type="radio" name="arbeit" value="${esc(n)}" ${n === A ? 'checked' : ''}><i style="background:${c}"></i>${esc(n)}<small>${k === 'g' ? 'Gasse (Boden)' : 'Laubwand / Reihe'}</small></label>`).join('')}</div>
         <div id="wirkBox"></div>
-        <button class="btn" type="submit">▶ Aufzeichnung starten</button>
-        <button class="btn sec" type="button" onclick="App.psForm()">💧 Pflanzenschutz – zur Spritzung</button>
+        <button class="btn" type="submit">▶ Mit GPS aufzeichnen</button>
+        <button class="btn sec" type="button" onclick="App.jobManual()">✍️ Ohne GPS – danach von Hand eintragen</button>
+        <button class="btn sec" type="button" onclick="App.psForm()">💧 Pflanzenschutz</button>
         <button class="btn sec" type="button" onclick="App.closeSheet()">Abbrechen</button>
         <p class="note">Display anlassen. Mit „Pause“ unterbrichst du (Defekt, Mittag) – bei Feierabend einfach „Beenden“, der Fortschritt bleibt erhalten.</p></form>`);
     jobWirk();
   }
   function jobWirk(){ const f = $('#frm'), box = $('#wirkBox'); if (!f || !box) return; const a = (f.querySelector('input[name=arbeit]:checked') || {}).value;
     box.innerHTML = a && isSeiten(a) ? field('Das Gerät bearbeitet beim Fahren', wirkSel(a)) : ''; }
+  function jobManual(){
+    const a = (($('#frm') || {}).querySelector && $('#frm').querySelector('input[name=arbeit]:checked') || {}).value;
+    if (!a) return formError('Bitte eine Arbeit wählen.');
+    S.ui.lastJob = a; save(); wbUI.arbeit = a; wbUI.marks = [];
+    const list = wbList();
+    openSheet(`<h2>✍️ ${esc(a)}</h2><p class="lead">In welchem Weinberg? Danach über die ${isGasse(a) ? 'Gassen' : 'Reihen'} wischen, die du gefahren bist.</p>
+      <div class="card">${list.map(w => `<button class="row" onclick="App.openWeinberg('${esc(w.Weinberg_ID)}')"><div class="main"><div class="title">${esc(w.Name)}</div><div class="sub">${esc(w.Rebsorte || '')} ${fmtHa(num(w.Flaeche_ha))}</div></div></button>`).join('') || '<div class="empty">Noch kein Weinberg angelegt.</div>'}</div>`);
+  }
   function jobStart(){
     const fd = Object.fromEntries(new FormData($('#frm')).entries());
     if (!fd.arbeit) return formError('Bitte eine Arbeit wählen.');
@@ -1835,7 +1874,7 @@ const App = (() => {
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 
-  return { init, go, handPick, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
+  return { init, go, saisonPick, setSaison, wbSorte, handPick, jobManual, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
 })();
 App.init();
 </script>
