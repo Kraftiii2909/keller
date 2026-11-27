@@ -1731,8 +1731,8 @@ const App = (() => {
       $('#kCtl').innerHTML = `<div class="mapctl">${B('↶ Zurück zum Umriss', "App.kStep('umriss')")}</div><button class="btn" onclick="App.kStep('reihen')">${K.line.length === 2 ? 'Weiter: Reihen prüfen' : 'Überspringen (längste Kante)'}</button>`;
     } else {
       $('#kCtl').innerHTML = `<p class="note" style="margin:10px 0">${info}</p>
-         <div class="mapctl">${B('⟲ −1°', 'App.kAdj("ang",-1)')}${B('−0,2°', 'App.kAdj("ang",-0.2)')}${B('+0,2°', 'App.kAdj("ang",0.2)')}${B('⟳ +1°', 'App.kAdj("ang",1)')}</div>
-         <div class="mapctl">${B('◀ Versatz', 'App.kAdj("off",-0.2)')}${B('Versatz ▶', 'App.kAdj("off",0.2)')}${B('Zeile enger', 'App.kAdj("sp",-0.05)')}${B('Zeile weiter', 'App.kAdj("sp",0.05)')}</div>
+         <div class="mapctl">${B('⟲ −1°', 'App.kAdj(\'ang\',-1)')}${B('−0,2°', 'App.kAdj(\'ang\',-0.2)')}${B('+0,2°', 'App.kAdj(\'ang\',0.2)')}${B('⟳ +1°', 'App.kAdj(\'ang\',1)')}</div>
+         <div class="mapctl">${B('◀ Versatz', 'App.kAdj(\'off\',-0.2)')}${B('Versatz ▶', 'App.kAdj(\'off\',0.2)')}${B('Zeile enger', 'App.kAdj(\'sp\',-0.05)')}${B('Zeile weiter', 'App.kAdj(\'sp\',0.05)')}</div>
          <div class="mapctl">${B('Richtung neu', "App.kStep('richtung')")}${B('Umriss ändern', "App.kStep('umriss')")}</div>
          ${S.snap.arbeiten.some(a => a.Weinberg_ID === K.id) ? '<p class="note warn">Achtung: Wenn sich die Zahl der Reihen ändert, passen frühere Markierungen evtl. nicht mehr genau.</p>' : ''}
          <button class="btn" onclick="App.kSave()">Umriss & Reihen speichern</button>`;
