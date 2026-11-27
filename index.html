@@ -180,11 +180,29 @@ input:focus,select:focus,textarea:focus{outline:2px solid rgba(110,31,47,.35);bo
 .flst{display:flex;gap:6px;margin:10px 0 4px}.flst input{flex:1;min-width:0;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:15px;background:#fff}
 .flst .btn{width:auto;margin:0;padding:10px 14px}.mapctl button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 details.more{margin:4px 0 12px}details.more summary{cursor:pointer;color:var(--muted);font-size:14px;padding:6px 2px}
+nav.tabs[hidden]{display:none}
+.homebtn{width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.1);color:#F5EFE6;display:grid;place-items:center;margin-right:8px;flex:none}
+.homebtn svg{width:20px;height:20px}
+.home{padding-top:10px}.home h1{font-family:var(--serif);font-size:30px;margin:6px 0 2px}.home .lead{margin-bottom:18px}
+.homecard{display:flex;align-items:center;gap:16px;width:100%;text-align:left;border-radius:22px;padding:26px 22px;margin-bottom:14px;color:#fff;box-shadow:0 6px 18px rgba(40,20,20,.16)}
+.homecard.keller{background:linear-gradient(135deg,#6E1F2F,#3E1420)}.homecard.weinberg{background:linear-gradient(135deg,#4E7A35,#2C4D24)}
+.homecard b{display:block;font-family:var(--serif);font-size:28px;font-weight:600}.homecard small{font-size:14px;opacity:.85}.hc-ico{font-size:40px}
+body.athome main{padding-bottom:30px}
+.gpsopt{display:flex;gap:10px;align-items:center;font-weight:600;margin:6px 2px 10px}.gpsopt input{width:22px;height:22px}
+.live{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:16px}
+.livehead{display:flex;align-items:center;gap:8px;margin-bottom:8px}.livehead small{margin-left:auto;color:var(--muted);font-size:12px;text-align:right}
+.dotrec{width:12px;height:12px;border-radius:50%;background:#C0392B;animation:blink 1.2s infinite}.live.paused .dotrec{background:#A99C92;animation:none}
+@keyframes blink{50%{opacity:.25}}
+.bigpause{font-size:19px;padding:18px;margin-top:10px}.live.paused .bigpause{background:#2F7D5B}
+.chiplbl{font-size:12px;font-weight:600;color:var(--muted);margin:6px 2px 4px}
+.running.job{background:#4E6B2E}
+.jobpick label i{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:2px}
+.btn.danger{background:#B4452A;color:#fff;border-color:#B4452A}
 </style>
 </head>
 <body>
 <header class="top">
-  <div class="mode" id="modeSw"><button data-mode="keller" onclick="App.setMode('keller')">Keller</button><button data-mode="weinberg" onclick="App.setMode('weinberg')">Weinberg</button></div><span style="flex:1"></span>
+  <button class="homebtn" onclick="App.go('home')" aria-label="Start"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg></button><div class="mode" id="modeSw"><button data-mode="keller" onclick="App.setMode('keller')">Keller</button><button data-mode="weinberg" onclick="App.setMode('weinberg')">Weinberg</button></div><span style="flex:1"></span>
   <button class="pill" id="syncPill" onclick="App.syncNow(true)"><span class="dot"></span><span id="syncText">…</span></button>
   <button class="icon-btn" aria-label="Einstellungen" onclick="App.openSettings()">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
@@ -336,15 +354,16 @@ const App = (() => {
   const NAV = { keller: [['faesser','Fässer'],['weine','Weine'],null,['buch','Kellerbuch'],['mehr','Mehr']],
                 weinberg: [['wb','Weinberge'],['wbbuch','Tagebuch'],null,['ps','Spritzen'],['mehr','Mehr']] };
   function renderNav(){
+    $('#nav').hidden = tab === 'home'; document.body.classList.toggle('athome', tab === 'home');
     $('#nav').innerHTML = NAV[mode].map(n => n ? `<button data-tab="${n[0]}" class="${n[0]===tab?'on':''}" onclick="App.go('${n[0]}')"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[n[0]]}</svg>${n[1]}</button>`
       : `<button class="fab" aria-label="Neuer Eintrag" onclick="App.fab()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>`).join('');
-    document.querySelectorAll('#modeSw button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
+    document.querySelectorAll('#modeSw button').forEach(b => b.classList.toggle('on', tab !== 'home' && b.dataset.mode === mode));
   }
   function render(){
     renderNav();
     $('#demoBanner').hidden = !S.demo;
     const v = $('#view');
-    const V = { faesser: viewFaesser, weine: viewWeine, buch: viewBuch, mehr: viewMehr, wb: viewWB, wbbuch: viewWBBuch, ps: viewPS };
+    const V = { home: viewHome, faesser: viewFaesser, weine: viewWeine, buch: viewBuch, mehr: viewMehr, wb: viewWB, wbbuch: viewWBBuch, ps: viewPS };
     v.innerHTML = (V[tab] || viewFaesser)();
     renderSync();
   }
@@ -830,9 +849,13 @@ const App = (() => {
   /* =====================================================================
      WEINBERG: Weinberge, Reihen, Arbeiten, Pflanzenschutz
      ===================================================================== */
-  const ARBEITEN = [['Rebschnitt','#8A5A2B'],['Biegen/Anbinden','#B7792F'],['Ausbrechen','#6E9A2F'],['Heften','#2F7D5B'],
-    ['Laubschnitt','#1F6E7A'],['Entblättern','#9AAE2A'],['Mulchen','#6B7F3A'],['Bodenbearbeitung','#7A5A45'],
-    ['Düngung','#6B5B9A'],['Pflanzenschutz','#2F6FB0'],['Lese','#8E2A3E'],['Sonstiges','#7A6A61']];
+  const ARBEITEN = [['Rebschnitt','#8A5A2B','h'],['Biegen/Anbinden','#B7792F','h'],['Ausbrechen','#6E9A2F','h'],['Heften','#2F7D5B','h'],
+    ['Entblättern','#9AAE2A','h'],['Lese','#8E2A3E','h'],['Sonstiges','#7A6A61','h'],
+    ['Mulchen','#6B7F3A','g'],['Bodenbearbeitung','#7A5A45','g'],['Düngung','#6B5B9A','g'],
+    ['Laubschnitt','#1F6E7A','z'],['Unterstockpflege','#A0522D','z'],['Pflanzenschutz','#2F6FB0','z']];
+  // h = Handarbeit, z = Schlepper an der Zeile (Reihen), g = Schlepper in der Gasse (Boden)
+  const arbeitArt = a => (ARBEITEN.find(x => x[0] === a) || [0, 0, 'h'])[2];
+  const isSchlepper = a => arbeitArt(a) !== 'h', isGasse = a => arbeitArt(a) === 'g';
   const arbeitFarbe = a => (ARBEITEN.find(x => x[0] === a) || [0,'#7A6A61'])[1];
   const KULTUR = 'Weinrebe (VITVI)';
   const wbUI = { arbeit: 'Rebschnitt', marks: [], id: null };
@@ -891,7 +914,7 @@ const App = (() => {
       const rot = p => [p[0]*c - p[1]*s, -(p[0]*s + p[1]*c)];
       const rows = rws.map(r => { let A = rot(P.to([r[0], r[1]])), B = rot(P.to([r[2], r[3]])); if (A[0] > B[0]) [A, B] = [B, A];
         return { x0: A[0], x1: B[0], y: (A[1] + B[1]) / 2, len: Math.hypot(B[0]-A[0], B[1]-A[1]) }; });
-      res = { rows, polys: polys.map(p => p.map(P.to).map(rot)), sp };
+      res = { rows, polys: polys.map(p => p.map(P.to).map(rot)), sp, toF: ll => rot(P.to(ll)) };
     } else {
       const n = Math.round(num(w.Reihen_Anzahl) || 0);
       if (n > 0) {
@@ -906,6 +929,20 @@ const App = (() => {
     return res;
   }
 
+  /* Gassen (zwischen zwei Reihen) für Bodenarbeiten wie Mulchen */
+  function gasseFrame(f){
+    if (!f) return f; if (f._g) return f._g;
+    const g = [];
+    f.rows.forEach((a, ai) => { let best = null, bd = Infinity;
+      f.rows.forEach(b => { const dy = b.y - a.y; if (dy < f.sp * 0.5 || dy > f.sp * 1.6) return;
+        const x0 = Math.max(a.x0, b.x0), x1 = Math.min(a.x1, b.x1); if (x1 - x0 < 2) return;
+        if (dy < bd) { bd = dy; best = { x0, x1, y: (a.y + b.y) / 2, len: x1 - x0, ai }; } });
+      if (best) g.push(best); });
+    g.sort((p, q) => p.ai - q.ai);
+    f._g = Object.assign({}, f, { rows: g, base: f.rows, gasse: true });
+    return f._g;
+  }
+  const frameFor = (w, arbeit) => isGasse(arbeit) ? gasseFrame(frame(w)) : frame(w);
   /* ---------- Fortschritt ---------- */
   function mergeIv(iv){ iv = iv.filter(x => x[1] > x[0]).sort((a,b) => a[0] - b[0]); const out = [];
     iv.forEach(x => { const l = out[out.length - 1]; if (l && x[0] <= l[1] + 0.005) l[1] = Math.max(l[1], x[1]); else out.push([x[0], x[1]]); }); return out; }
@@ -921,25 +958,27 @@ const App = (() => {
     S.snap.arbeiten.filter(a => a.Weinberg_ID === w.Weinberg_ID && a.Arbeit === arbeit && String(a.Datum) >= since)
       .forEach(a => jparse(a.Reihen, []).forEach(s => segs.push(s)));
     const map = segsToRows(segs);
-    return { map, pct: pctOf(frame(w), map) };
+    return { map, pct: pctOf(frameFor(w, arbeit), map) };
   }
 
   /* ---------- Zeichnen ---------- */
   function wbSVG(w, o = {}){
-    const f = o.frame || frame(w);
+    const f = o.frame || frameFor(w, o.arbeit), base = f.base || f.rows;
     if (!f) return `<svg viewBox="0 0 100 60"><text x="50" y="34" text-anchor="middle" font-size="9" fill="#A99C92">noch keine Reihen</text></svg>`;
-    const allP = f.polys.flat(), xs = allP.map(p => p[0]).concat(f.rows.flatMap(r => [r.x0, r.x1])), ys = allP.map(p => p[1]).concat(f.rows.map(r => r.y));
+    const allP = f.polys.flat(), xs = allP.map(p => p[0]).concat(base.flatMap(r => [r.x0, r.x1])), ys = allP.map(p => p[1]).concat(base.map(r => r.y));
     const pad = f.sp * 1.2, x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad, W = Math.max(...xs) - x0 + pad, H = Math.max(...ys) - y0 + pad;
     const big = !!o.big, col = arbeitFarbe(o.arbeit);
     const lw = big ? Math.max(f.sp * 0.42, W / 220) : Math.max(f.sp * 0.55, W / 60);
     const line = (r, a, b, c, w2, extra='') => `<line x1="${(r.x0 + (r.x1 - r.x0) * a).toFixed(2)}" y1="${r.y.toFixed(2)}" x2="${(r.x0 + (r.x1 - r.x0) * b).toFixed(2)}" y2="${r.y.toFixed(2)}" stroke="${c}" stroke-width="${w2.toFixed(2)}" stroke-linecap="round" ${extra}/>`;
     let g = `<path d="${f.polys.map(pl => 'M' + pl.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L') + 'Z').join('')}" fill="${big ? '#EAE0CF' : '#E4D8C4'}" stroke="#C9B9A2" stroke-width="${(lw*0.5).toFixed(2)}"/>`;
-    g += f.rows.map(r => line(r, 0, 1, big ? '#BDB0A0' : '#CFC2B0', lw * 0.55)).join('');
+    g += base.map(r => line(r, 0, 1, big ? '#BDB0A0' : '#CFC2B0', lw * 0.55)).join('');
+    if (f.gasse && big) g += f.rows.map(r => line(r, 0, 1, '#D9CDBB', lw * 0.35, 'stroke-dasharray="' + (f.sp * 0.6).toFixed(1) + ' ' + (f.sp * 0.6).toFixed(1) + '"')).join('');
     if (o.arbeit) {
       const cov = o.cov || coverage(w, o.arbeit);
       cov.map.forEach((ivs, i) => { const r = f.rows[i]; if (r) ivs.forEach(iv => g += line(r, iv[0], iv[1], col, lw, 'opacity=".75"')); });
     }
     (o.marks || []).forEach(gst => gst.forEach(([i, a, b]) => { const r = f.rows[i]; if (r) g += line(r, a, b, '#fff', lw * 1.9) + line(r, a, b, col, lw * 1.25); }));
+    if (o.dot) g += `<circle cx="${o.dot[0].toFixed(1)}" cy="${o.dot[1].toFixed(1)}" r="${(f.sp * 1.1).toFixed(1)}" fill="#2F6FB0" stroke="#fff" stroke-width="${(f.sp * 0.4).toFixed(1)}"/>`;
     if (big) { const fs = Math.max(f.sp * 0.9, W / 45);
       [0, f.rows.length - 1].forEach(i => { const r = f.rows[i]; if (r) g += `<text x="${(r.x0 - fs * 0.4).toFixed(1)}" y="${(r.y + fs * 0.35).toFixed(1)}" font-size="${fs.toFixed(1)}" text-anchor="end" fill="#8A7A70" font-family="-apple-system,sans-serif">${i + 1}</text>`; });
       if (f.rows.length > 10) for (let i = 4; i < f.rows.length - 2; i += 5) { const r = f.rows[i]; g += `<text x="${(r.x0 - fs * 0.4).toFixed(1)}" y="${(r.y + fs * 0.35).toFixed(1)}" font-size="${(fs*0.8).toFixed(1)}" text-anchor="end" fill="#A99C92" font-family="-apple-system,sans-serif">${i + 1}</text>`; }
@@ -949,53 +988,60 @@ const App = (() => {
 
   /* ---------- Ansichten ---------- */
   function arbeitChips(sel, fn){
-    return `<div class="chips">${ARBEITEN.map(([n, c]) => `<button type="button" class="${n === sel ? 'on' : ''}" onclick="App.${fn}('${n}')"><i style="background:${c}"></i>${n}</button>`).join('')}</div>`;
+    const ch = k => ARBEITEN.filter(x => (x[2] === 'h') === (k === 'h')).map(([n, c]) => `<button type="button" class="${n === sel ? 'on' : ''}" onclick="App.${fn}('${n}')"><i style="background:${c}"></i>${n}</button>`).join('');
+    return `<div class="chiplbl">✋ Handarbeit</div><div class="chips">${ch('h')}</div><div class="chiplbl">🚜 Schlepper</div><div class="chips">${ch('s')}</div>`;
   }
   function runningBanner(){
-    const d = S.ui.psDraft; if (!d) return '';
-    return `<div class="running">💧 <div><b>Spritzung läuft</b><br><small>seit ${esc(d.beginn)} Uhr · ${esc((d.wbNames || []).join(', '))}</small></div><button onclick="App.psForm(true)">Beenden</button></div>`;
+    const d = S.ui.psDraft;
+    if (!d && S.ui.job) { const jb = S.ui.job; return `<div class="running job">🚜 <div onclick="App.go('wb')" style="flex:1"><b>${esc(jb.arbeit)} ${jb.trk.paused ? 'pausiert' : 'läuft'}</b><br><small>seit ${esc(jb.beginn)} Uhr · GPS</small></div><button onclick="App.jobFinish()">Beenden</button></div>`; }
+    if (!d) return '';
+    return `<div class="running">💧 <div onclick="App.go('ps')" style="flex:1"><b>Spritzung ${d.trk && d.trk.paused ? 'pausiert' : 'läuft'}</b><br><small>seit ${esc(d.beginn)} Uhr${d.trk ? ' · GPS' : ''} · ${esc((d.wbNames || []).join(', '))}</small></div><button onclick="App.psForm(true)">Beenden</button></div>`;
   }
   function viewWB(){
     const list = wbList(), A = wbUI.arbeit;
     const ha = list.reduce((s, w) => s + (num(w.Flaeche_ha) || 0), 0);
     let tot = 0, cov = 0;
     const rows = list.map(w => {
-      const c = coverage(w, A), f = frame(w), len = f ? f.rows.reduce((s, r) => s + r.len, 0) : 0;
+      const c = coverage(w, A), f = frameFor(w, A), f0 = frame(w), len = f ? f.rows.reduce((s, r) => s + r.len, 0) : 0;
       tot += len; cov += len * c.pct / 100;
       return `<button class="wb-card" onclick="App.openWeinberg('${esc(w.Weinberg_ID)}')">
         <div class="wb-mini">${wbSVG(w, { arbeit: A, cov: c })}</div>
         <div class="main" style="flex:1;min-width:0"><div class="title">${esc(w.Name)}</div>
-        <div class="sub">${[esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f ? f.rows.length + ' Reihen' : 'noch keine Reihen'].filter(Boolean).join(' · ')}</div>
+        <div class="sub">${[esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f0 ? f0.rows.length + ' Reihen' : 'noch keine Reihen'].filter(Boolean).join(' · ')}</div>
         <div class="bar"><i style="width:${c.pct.toFixed(1)}%;background:${arbeitFarbe(A)}"></i></div></div>
         <div class="right">${Math.round(c.pct)} %</div></button>`;
     }).join('');
-    return `${runningBanner()}<div class="section-title"><h2>Weinberge</h2><small>${list.length} · ${fmtHa(ha) || '0 ha'}</small></div>
+    return `${runningBanner()}${S.ui.job ? `<div class="liveslot">${liveHTML()}</div>` : `<button class="btn sec" style="margin-bottom:14px" onclick="App.jobForm()">🚜 Schlepperarbeit mit GPS starten</button>`}<div class="section-title"><h2>Weinberge</h2><small>${list.length} · ${fmtHa(ha) || '0 ha'}</small></div>
       ${arbeitChips(A, 'wbViewArbeit')}
       <div class="prog" style="margin-top:0"><span>${esc(A)} · ${saison().label}</span><b>${tot ? Math.round(100 * cov / tot) : 0} %</b></div>
       <div class="card">${rows || '<div class="empty">Noch kein Weinberg angelegt.</div>'}</div>
       <button class="btn sec" style="margin-top:14px" onclick="App.wbEdit()">+ Weinberg anlegen</button>`;
   }
+  function bookFilter(k){ S.ui.bookFilter = k; save(); render(); }
   function wbViewArbeit(a){ wbUI.arbeit = a; render(); }
 
   function viewWBBuch(){
-    const list = [...S.snap.arbeiten].sort((a, b) => String(b.Datum).localeCompare(String(a.Datum)) || String(b.Erfasst_am || '').localeCompare(String(a.Erfasst_am || '')));
-    if (!list.length) return `<div class="section-title"><h2>Tagebuch</h2></div><div class="empty">Noch keine Arbeiten eingetragen.<br>Weinberg öffnen und über die Reihen wischen.</div>`;
+    const F = S.ui.bookFilter || 'alle';
+    const fbar = `<div class="mapctl">${[['alle', 'Alle'], ['h', '✋ Hand'], ['s', '🚜 Schlepper']].map(([k, t]) => `<button type="button" class="${F === k ? 'on' : ''}" onclick="App.bookFilter('${k}')">${t}</button>`).join('')}</div>`;
+    const list = [...S.snap.arbeiten].filter(a => F === 'alle' || (F === 'h') !== isSchlepper(a.Arbeit)).sort((a, b) => String(b.Datum).localeCompare(String(a.Datum)) || String(b.Erfasst_am || '').localeCompare(String(a.Erfasst_am || '')));
+    if (!list.length) return `${runningBanner()}<div class="section-title"><h2>Tagebuch</h2></div>${fbar}<div class="empty">Noch keine Arbeiten eingetragen.<br>Weinberg öffnen und über die Reihen wischen.</div>`;
     let html = '', day = '';
     list.forEach(a => {
       const d = fmtDate(a.Datum);
       if (d !== day) { if (day) html += '</div>'; html += `<div class="log-day">${d}</div><div class="card log">`; day = d; }
       const bits = [num(a.Anteil_Prozent) != null ? fmtNum(a.Anteil_Prozent, 0) + ' % der Fläche' : '', num(a.Stunden) ? fmtNum(a.Stunden) + ' h' : '', a.Person ? 'von ' + esc(a.Person) : '', esc(a.Notiz || '')].filter(Boolean);
       html += `<button class="row" onclick="App.openWeinberg('${esc(a.Weinberg_ID)}')"><span class="swatch" style="background:${arbeitFarbe(a.Arbeit)}"></span><div class="main">
-        <div class="title">${esc(a.Arbeit)} · ${esc(a.Weinberg || (wbById(a.Weinberg_ID) || {}).Name || '')}</div><div class="sub">${bits.join(' · ')}</div>
+        <div class="title">${isSchlepper(a.Arbeit) ? '🚜' : '✋'} ${esc(a.Arbeit)} · ${esc(a.Weinberg || (wbById(a.Weinberg_ID) || {}).Name || '')}</div><div class="sub">${bits.join(' · ')}</div>
         ${a._pending ? '<div class="pending">⟳ wartet auf Übertragung</div>' : ''}</div></button>`;
     });
-    return `<div class="section-title"><h2>Tagebuch</h2><small>${list.length} Einträge</small></div>` + html + '</div>';
+    return `${runningBanner()}<div class="section-title"><h2>Tagebuch</h2><small>${list.length} Einträge</small></div>${fbar}` + html + '</div>';
   }
 
   function wbNewEntry(){
     const list = wbList();
     openSheet(`<h2>Weinberg</h2><p class="lead">Was hast du gemacht?</p>
       <div class="actions" style="grid-template-columns:1fr 1fr">
+        <button class="act" onclick="App.jobForm()"><span class="ico">🚜</span>Schlepper (GPS)</button>
         <button class="act" onclick="App.psForm()"><span class="ico">💧</span>Pflanzenschutz</button>
         <button class="act" onclick="App.wbEdit()"><span class="ico">➕</span>Weinberg anlegen</button></div>
       <div class="log-day">Arbeit eintragen – Weinberg wählen</div>
@@ -1006,29 +1052,35 @@ const App = (() => {
   function openWeinberg(id){
     const w = wbById(id); if (!w) return toast('Weinberg nicht gefunden');
     if (wbUI.id !== id) { wbUI.marks = []; wbUI.erase = false; }
+    if (wbUI.review && wbUI.review.id !== id) wbUI.review = null;
+    const rv = wbUI.review;
     wbUI.list = !!S.ui.wbList;
     wbUI.id = id;
     const f = frame(w);
     const hist = S.snap.arbeiten.filter(a => a.Weinberg_ID === id).sort((a, b) => String(b.Datum).localeCompare(String(a.Datum))).slice(0, 30);
     openSheet(`<h2>${esc(w.Name)}</h2>
       <p class="lead">${[esc(w.Lage || ''), w.Flurstueck ? 'Flst. ' + esc(w.Flurstueck) : '', esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f ? f.rows.length + ' Reihen' : ''].filter(Boolean).join(' · ')}</p>
-      ${f ? `${arbeitChips(wbUI.arbeit, 'wbArbeit')}
-      <div class="prog" id="wbProg"></div>
+      ${rv ? `<div class="running" style="background:#E7F0F8;color:var(--ink)">📍 <div><b>GPS-Spuren: ${esc(rv.arbeit || 'Pflanzenschutz')}</b><br><small>Prüfen, mit „Einzeln“ oder „Radieren“ korrigieren, dann speichern. ${(S.ui.psReview || []).length > 1 ? `(noch ${S.ui.psReview.length - 1} weitere)` : ''}</small></div></div>` : ''}
+      ${f ? `${rv ? '' : arbeitChips(wbUI.arbeit, 'wbArbeit')}
+      <div class="prog" id="wbProg"></div><div id="wbGps"></div>
       <div class="mapctl" id="wbTools"><button type="button" data-v="map" onclick="App.wbView('map')">Übersicht</button><button type="button" data-v="list" onclick="App.wbView('list')">Einzeln</button>
         <button type="button" id="wbErase" onclick="App.wbEraseToggle()">🧽 Radieren</button><button type="button" id="wbUndoBtn" onclick="App.wbUndo()">↶</button></div>
       <div class="wb-box" id="wbBox"></div>
       <p class="note" style="margin-top:8px" id="wbHelp">${wbUI.list ? '<b>Tippen</b> = ganze Reihe an/aus · <b>waagerecht ziehen</b> = nur ein Stück · hoch/runter = blättern.' : '<b>Quer</b> über die Reihen wischen = ganze Reihen · <b>längs</b> einer Reihe = nur ein Stück · <b>Tippen</b> = eine Reihe. Für einzelne Reihen und Stücke: „Einzeln“.'}</p>
       <form id="frm" onsubmit="event.preventDefault();App.wbSave()"><p id="frmErr" class="note warn" hidden></p>
-        <div class="two">${field('Datum', `<input name="Datum" type="date" value="${today()}">`)}${field('Stunden', inNum('Stunden', null, 'optional'))}</div>
+        <div class="two">${field('Datum', `<input name="Datum" type="date" value="${rv ? esc(rv.datum) : today()}">`)}${field('Stunden', inNum('Stunden', rv && rv.stunden ? rv.stunden : null, 'optional'))}</div>
         ${field('Notiz', inTxt('Notiz', '', 'optional'))}
         <div class="btnrow"><button class="btn sec small" type="button" onclick="App.wbAll()">Ganzer Weinberg</button></div>
         <button class="btn" type="submit" id="wbSaveBtn">Speichern</button></form>`
       : `<p class="note">Für diesen Weinberg sind noch keine Reihen angelegt. Zeichne den Umriss auf der Karte – oder trag unter „Daten bearbeiten“ einfach die Anzahl der Reihen ein.</p>`}
       <div class="btnrow"><button class="btn sec small" onclick="App.openKarte('${esc(id)}')">🗺️ Umriss & Reihen</button><button class="btn sec small" onclick="App.wbEdit('${esc(id)}')">✏️ Daten bearbeiten</button></div>
       ${hist.length ? `<div class="log-day" style="margin-top:16px">Letzte Arbeiten</div><div class="card">${hist.map(a => `<div class="row"><span class="swatch" style="background:${arbeitFarbe(a.Arbeit)}"></span><div class="main"><div class="title">${esc(a.Arbeit)}</div><div class="sub">${fmtDate(a.Datum)} · ${fmtNum(a.Anteil_Prozent, 0)} %${num(a.Stunden) ? ' · ' + fmtNum(a.Stunden) + ' h' : ''}${a.Person ? ' · ' + esc(a.Person) : ''}${a.Notiz ? ' · ' + esc(a.Notiz) : ''}</div></div>${a.Arbeit === 'Pflanzenschutz' ? '' : `<button class="btn sec small del" onclick="App.wbDelArbeit('${esc(a.Arbeit_ID)}',this)">🗑</button>`}</div>`).join('')}</div>` : ''}`);
-    if (f) wbDraw();
+    if (f) { gpsBtn(); wbDraw(); }
   }
-  function wbArbeit(a){ wbUI.arbeit = a; document.querySelectorAll('#sheetBody .chips button').forEach(b => b.classList.toggle('on', b.textContent.trim() === a)); wbDraw(); }
+  function wbArbeit(a){ if (isGasse(a) !== isGasse(wbUI.arbeit)) wbUI.marks = []; wbUI.arbeit = a; document.querySelectorAll('#sheetBody .chips button').forEach(b => b.classList.toggle('on', b.textContent.trim() === a)); gpsBtn(); wbDraw(); }
+  function gpsBtn(){ const el = $('#wbGps'); if (!el) return; const a = wbUI.arbeit;
+    el.innerHTML = !isSchlepper(a) || wbUI.review ? '' : a === 'Pflanzenschutz' ? `<button class="btn sec" onclick="App.psForm()">💧 Spritzung planen & mit GPS starten</button>`
+      : `<button class="btn sec" onclick="App.jobForm('${a}')">🚜 ${esc(a)} mit GPS aufzeichnen</button>`; }
   /* Markierungen: Liste von Gesten {segs, erase}; daraus die Netto-Markierung */
   function subIv(iv, a, b){ const out = []; iv.forEach(([x, y]) => { if (y <= a || x >= b) out.push([x, y]); else { if (x < a) out.push([x, a]); if (y > b) out.push([b, y]); } }); return out.filter(v => v[1] - v[0] > 0.005); }
   function netMap(){
@@ -1040,23 +1092,23 @@ const App = (() => {
   const netSegs = () => Array.from(netMap().entries()).flatMap(([i, iv]) => iv.map(x => [i, +x[0].toFixed(3), +x[1].toFixed(3)]));
   /* Für die große Ansicht die Reihen auseinanderziehen, damit man sie mit dem Finger trifft */
   function bigFrame(f, boxW){
-    const allX = f.polys.flat().map(p => p[0]).concat(f.rows.flatMap(r => [r.x0, r.x1]));
+    const allX = f.polys.flat().map(p => p[0]).concat((f.base || f.rows).flatMap(r => [r.x0, r.x1]));
     const W = Math.max(...allX) - Math.min(...allX) + f.sp * 5, pxPerM = boxW / W;
     const rows = f.rows.length, wantPx = 18, maxH = Math.min(560, window.innerHeight * 0.62);
     let k = Math.max(1, wantPx / (f.sp * pxPerM));
     const allY = f.polys.flat().map(p => p[1]), hPx = (Math.max(...allY) - Math.min(...allY) + f.sp * 2.4) * pxPerM;
     if (hPx * k > maxH) k = Math.max(1, maxH / hPx);
-    return { k, rowPx: f.sp * k * pxPerM, f: { rows: f.rows.map(r => Object.assign({}, r, { y: r.y * k })), polys: f.polys.map(pl => pl.map(p => [p[0], p[1] * k])), sp: f.sp * k } };
+    return { k, rowPx: f.sp * k * pxPerM, f: { rows: f.rows.map(r => Object.assign({}, r, { y: r.y * k })), polys: f.polys.map(pl => pl.map(p => [p[0], p[1] * k])), sp: f.sp * k, gasse: f.gasse, base: f.base && f.base.map(r => Object.assign({}, r, { y: r.y * k })) } };
   }
   function wbDraw(){
-    const w = wbById(wbUI.id), f = frame(w), box = $('#wbBox'); if (!box || !f) return;
+    const w = wbById(wbUI.id), f = frameFor(w, wbUI.arbeit), box = $('#wbBox'); if (!box || !f) return;
     const cov = coverage(w, wbUI.arbeit), segs = netSegs(), neu = new Set(segs.map(s => s[0]));
     const add = pctOf(f, segsToRows(Array.from(cov.map.entries()).flatMap(([i, iv]) => iv.map(x => [i, x[0], x[1]])).concat(segs))) - cov.pct;
     $('#wbProg').innerHTML = `<span>${esc(wbUI.arbeit)} · ${saison().label}</span><span>${segs.length ? `<span style="color:${arbeitFarbe(wbUI.arbeit)};font-weight:700">+${Math.max(0, add).toFixed(0)} % neu</span> · ` : ''}<b>${Math.round(cov.pct)} %</b></span>`;
     document.querySelectorAll('#wbTools button[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === (wbUI.list ? 'list' : 'map')));
     const er = $('#wbErase'); if (er) er.classList.toggle('on', !!wbUI.erase);
     const und = $('#wbUndoBtn'); if (und) und.disabled = !wbUI.marks.length;
-    const btn = $('#wbSaveBtn'); if (btn) { btn.disabled = !segs.length; btn.style.opacity = segs.length ? 1 : .45; btn.textContent = segs.length ? `Speichern (${neu.size} Reihe${neu.size === 1 ? '' : 'n'})` : 'Speichern'; }
+    const btn = $('#wbSaveBtn'); if (btn) { btn.disabled = !segs.length; btn.style.opacity = segs.length ? 1 : .45; btn.textContent = segs.length ? `Speichern (${neu.size} ${f.gasse ? 'Gasse' + (neu.size === 1 ? '' : 'n') : 'Reihe' + (neu.size === 1 ? '' : 'n')})` : 'Speichern'; }
     box.classList.toggle('erase', !!wbUI.erase); box.classList.toggle('list', !!wbUI.list);
     if (wbUI.list) return drawList(w, f, cov);
     const bf = bigFrame(f, Math.max(200, box.clientWidth - 16));
@@ -1070,7 +1122,7 @@ const App = (() => {
     const maxLen = Math.max(...f.rows.map(r => r.len));
     const bar = (a, b, cls, c) => `<i class="${cls}" style="left:${(a*100).toFixed(1)}%;width:${((b-a)*100).toFixed(1)}%;background:${c}"></i>`;
     box.innerHTML = `<div class="rlist">${order.map(i => { const r = f.rows[i];
-      return `<div class="rrow"><b>${i + 1}</b><div class="track" data-i="${i}" style="width:${Math.max(35, 100 * r.len / maxLen).toFixed(0)}%">
+      return `<div class="rrow"><b>${f.gasse ? 'G' : ''}${i + 1}</b><div class="track" data-i="${i}" style="width:${Math.max(35, 100 * r.len / maxLen).toFixed(0)}%">
         ${(cov.map.get(i) || []).map(iv => bar(iv[0], iv[1], 'done', col)).join('')}${(net.get(i) || []).map(iv => bar(iv[0], iv[1], 'new', col)).join('')}</div><small>${Math.round(r.len)} m</small></div>`; }).join('')}</div>`;
     box.querySelector('.rlist').scrollTop = top;
     box.querySelectorAll('.track').forEach(t => {
@@ -1120,18 +1172,20 @@ const App = (() => {
     return out;
   }
   function wbUndo(){ wbUI.marks.pop(); wbDraw(); }
-  function wbAll(){ const f = frame(wbById(wbUI.id)); if (f) { wbUI.marks.push({ segs: f.rows.map((r, i) => [i, 0, 1]), erase: false }); wbDraw(); } }
+  function wbAll(){ const f = frameFor(wbById(wbUI.id), wbUI.arbeit); if (f) { wbUI.marks.push({ segs: f.rows.map((r, i) => [i, 0, 1]), erase: false }); wbDraw(); } }
   function wbView(v){ wbUI.list = v === 'list'; S.ui.wbList = wbUI.list; save(); const h = $('#wbHelp'); if (h) h.innerHTML = wbUI.list ? '<b>Tippen</b> = ganze Reihe an/aus · <b>waagerecht ziehen</b> = nur ein Stück · hoch/runter = blättern.' : '<b>Quer</b> über die Reihen wischen = ganze Reihen · <b>längs</b> einer Reihe = nur ein Stück · <b>Tippen</b> = eine Reihe.'; wbDraw(); }
   function wbEraseToggle(){ wbUI.erase = !wbUI.erase; wbDraw(); }
   function wbSave(){
-    const w = wbById(wbUI.id), f = frame(w), segs = netSegs();
+    const w = wbById(wbUI.id), f = frameFor(w, wbUI.arbeit), segs = netSegs();
     if (!segs.length) return formError('Erst die bearbeiteten Reihen markieren.');
     const fd = Object.fromEntries(new FormData($('#frm')).entries());
-    const map = segsToRows(segs), id = uid();
+    const map = segsToRows(segs), rv = wbUI.review && wbUI.review.id === w.Weinberg_ID ? wbUI.review : null, id = rv ? rv.sid : uid();
     queueOp({ id, arbeiten: [{ Arbeit_ID: id, Datum: fd.Datum || today(), Weinberg_ID: w.Weinberg_ID, Weinberg: w.Name, Arbeit: wbUI.arbeit,
-      Anteil_Prozent: +pctOf(f, map).toFixed(1), Reihen: JSON.stringify(segs), Stunden: num(fd.Stunden), Person: S.name || '', Notiz: fd.Notiz || '', Erfasst_am: new Date().toISOString() }] },
+      Anteil_Prozent: +pctOf(f, map).toFixed(1), Reihen: JSON.stringify(segs), Stunden: num(fd.Stunden), Person: rv ? rv.person : (S.name || ''), Notiz: [rv ? rv.notiz : '', fd.Notiz || ''].filter(Boolean).join(' · '), Erfasst_am: new Date().toISOString() }] },
       `${wbUI.arbeit}: ${map.size} Reihen gespeichert`);
-    wbUI.marks = []; wbUI.erase = false; openWeinberg(w.Weinberg_ID);
+    wbUI.marks = []; wbUI.erase = false;
+    if (rv) { wbUI.review = null; S.ui.psReview = (S.ui.psReview || []).filter(x => x !== rv && x.sid !== rv.sid); save(); if (S.ui.psReview.length) return psReviewNext(); closeSheet(); tab = 'ps'; return render(); }
+    openWeinberg(w.Weinberg_ID);
   }
   /* Gespeicherte Arbeit löschen (zweimal tippen) */
   function wbDelArbeit(id, btn){
@@ -1383,7 +1437,9 @@ const App = (() => {
         ${rs.some(r => r._pending) ? '<div class="pending">⟳ wartet auf Übertragung</div>' : ''}</div></div>`;
     }).join('');
     const ml = [...S.snap.mittel].sort((a, b) => String(a.Mittel).localeCompare(String(b.Mittel), 'de'));
-    return `${runningBanner()}<div class="section-title"><h2>Pflanzenschutz</h2><small>${saison().label}</small></div>
+    return `${runningBanner()}${S.ui.psDraft && S.ui.psDraft.trk ? `<div class="liveslot">${liveHTML()}</div>` : ''}
+      ${(S.ui.psReview || []).length ? `<button class="btn" style="margin-bottom:14px" onclick="App.psReviewNext()">GPS-Spuren prüfen (${S.ui.psReview.length} Weinberg${S.ui.psReview.length === 1 ? '' : 'e'})</button>` : ''}
+      <div class="section-title"><h2>Pflanzenschutz</h2><small>${saison().label}</small></div>
       ${S.ui.psDraft ? '' : '<button class="btn" style="margin-bottom:14px" onclick="App.psForm()">💧 Spritzung planen & starten</button>'}
       <div class="card">${cards || '<div class="empty">Noch keine Spritzung dokumentiert.</div>'}</div>
       <div class="section-title" style="margin-top:22px"><h2>Mittel</h2><small>${ml.length}</small></div>
@@ -1415,13 +1471,18 @@ const App = (() => {
   function psForm(resume){
     const d = resume ? S.ui.psDraft : null, v = d ? d.fd : {};
     const sel = new Set(d ? d.fd.wb : []);
+    const det = d && d.trk ? gpsDetect() : [];
+    det.forEach(x => sel.add(x.w.Weinberg_ID));
+    const gpsBox = d ? (d.trk ? `<div class="card" style="padding:10px 12px;margin-bottom:12px"><b>📍 Per GPS erkannt</b><br>${det.length ? det.map(x => `${esc(x.w.Name)}: ${x.passes} Gasse${x.passes === 1 ? '' : 'n'}, ca. ${Math.round(x.pct)} %`).join('<br>') : '<span style="color:var(--muted)">kein Weinberg – bitte unten auswählen</span>'}${det.length ? '<br><small style="color:var(--muted)">Die Spuren prüfst du gleich nach dem Speichern.</small>' : ''}</div>` : '')
+      : `<label class="gpsopt"><input type="checkbox" name="gps" ${S.ui.psGps === false ? '' : 'checked'}> 📍 Gefahrene Gassen per GPS aufzeichnen</label>
+         <div class="two">${field('Gerät sprüht je Seite', `<select name="seite">${opts(['1 Reihe', '2 Reihen'], (S.ui.psSeite || 1) === 2 ? '2 Reihen' : '1 Reihe')}</select>`)}<div></div></div>`;
     const ml = [...S.snap.mittel].sort((a, b) => String(a.Mittel).localeCompare(String(b.Mittel), 'de'));
     const mOpts = s => `<option value="">– Mittel –</option>` + ml.map(m => `<option value="${esc(m.Mittel)}" ${m.Mittel === s ? 'selected' : ''}>${esc(m.Mittel)} (${esc(m.Einheit || '')})</option>`).join('');
     const lines = [1, 2, 3, 4].map(i => `<div class="mline"><select name="m${i}" onchange="App.psMittelPick(${i})">${mOpts(v['m' + i])}</select>${inNum('a' + i, v['a' + i] != null && v['a' + i] !== '' ? v['a' + i] : null, 'je ha (Basis)')}</div>`).join('');
     openSheet(`<h2>${d ? 'Spritzung beenden' : 'Spritzung'}</h2><p class="lead">${d ? 'Prüfen, Ende eintragen, speichern.' : 'Erst rechnen, dann starten – oder nachträglich als erledigt eintragen.'}</p>
       <form id="frm" oninput="App.psCalc()" onsubmit="event.preventDefault();App.psSave()"><p id="frmErr" class="note warn" hidden></p>
         <label style="display:block;font-size:13px;font-weight:600;color:#5E4B42;margin:0 2px 5px">Weinberge</label>
-        <div class="checks" style="margin-bottom:12px">${wbList().map(w => `<label><input type="checkbox" name="wb" value="${esc(w.Weinberg_ID)}" ${sel.has(w.Weinberg_ID) ? 'checked' : ''}>${esc(w.Name)}<small>${fmtHa(num(w.Flaeche_ha)) || 'Fläche fehlt'}</small></label>`).join('') || '<p class="note">Erst einen Weinberg anlegen.</p>'}</div>
+        ${d ? gpsBox : ''}<div class="checks" style="margin-bottom:12px">${wbList().map(w => `<label><input type="checkbox" name="wb" value="${esc(w.Weinberg_ID)}" ${sel.has(w.Weinberg_ID) ? 'checked' : ''}>${esc(w.Name)}<small>${fmtHa(num(w.Flaeche_ha)) || 'Fläche fehlt'}</small></label>`).join('') || '<p class="note">Erst einen Weinberg anlegen.</p>'}</div>
         <div class="two">${field('Fläche gesamt (ha)', inNum('flaeche', v.flaeche ?? null, 'automatisch'))}${field('Faktor', inNum('faktor', v.faktor ?? 1), '(Entw.-Stadium)')}</div>
         <div class="two">${field('Wasser (L/ha)', inNum('wasser', v.wasser ?? (S.ui.wasser || 400)))}${field('Tank (L)', inNum('tank', v.tank ?? (S.ui.tank || 1000)))}</div>
         <label style="display:block;font-size:13px;font-weight:600;color:#5E4B42;margin:0 2px 5px">Mittel und Basisaufwand je ha</label>${lines}
@@ -1430,6 +1491,7 @@ const App = (() => {
         <div class="two">${field('BBCH / Stadium', inTxt('bbch', v.bbch, 'z. B. 57'))}${field('Schaderreger', inTxt('schad', v.schad, 'z. B. Peronospora'))}</div>
         <div class="two">${field('Gerät', inTxt('geraet', v.geraet ?? S.ui.geraet, 'Sprühgerät'))}${field('Anwender', inTxt('anwender', v.anwender ?? S.name))}</div>
         <div class="two">${field('Datum', `<input name="datum" type="date" value="${esc(v.datum || today())}">`)}${field('Notiz', inTxt('notiz', v.notiz))}</div>
+        ${d ? '' : gpsBox}
         <div class="two">${field('Beginn', `<input name="beginn" type="time" value="${esc(d ? d.beginn : (v.beginn || ''))}">`)}${field('Ende', `<input name="ende" type="time" value="${d ? nowTime() : ''}">`)}</div>
         ${d ? '<button class="btn" type="submit">Beenden & dokumentieren</button><button class="btn sec" type="button" onclick="App.psCancel()">Spritzung verwerfen</button>'
             : '<button class="btn" type="button" onclick="App.psStart()">▶ Spritzung jetzt starten</button><button class="btn sec" type="submit">Als erledigt speichern (Beginn & Ende eintragen)</button>'}
@@ -1462,14 +1524,18 @@ const App = (() => {
       <p style="margin:8px 0 0;font-size:14px">${fmtNum(c.ha, 3)} ha · Wasser <b>${wGes ? fmtNum(wGes, 0) + ' L' : '–'}</b>${fills ? (full === 0 ? ` = 1 Tankfüllung mit ${fmtNum(wGes, 0)} L` : ` = ${full} volle${full === 1 ? 'r' : ''} Tank${full === 1 ? '' : 's'}${rest > 0.5 ? ` + Rest ${fmtNum(rest, 0)} L` : ''}`) : ''}</p>`;
   }
   function psStart(){
+    if (S.ui.job) return formError(`Erst „${S.ui.job.arbeit}“ beenden – es läuft schon eine Aufzeichnung.`);
     const c = psRead();
     if (!c.wbs.length) return formError('Bitte mindestens einen Weinberg wählen.');
     if (!c.mittel.length) return formError('Bitte mindestens ein Mittel mit Aufwand eintragen.');
-    S.ui.psDraft = { fd: c.fd, beginn: c.fd.beginn || nowTime(), wbNames: c.wbs.map(w => w.Name) };
+    const gps = !!c.fd.gps, seite = c.fd.seite === '2 Reihen' ? 2 : 1;
+    S.ui.psGps = gps; S.ui.psSeite = seite;
+    S.ui.psDraft = { fd: c.fd, beginn: c.fd.beginn || nowTime(), wbNames: c.wbs.map(w => w.Name), trk: gps ? { pts: [], paused: false, seite } : null };
+    if (gps) trkStart();
     S.ui.wasser = c.wasser; S.ui.tank = c.tank; S.ui.geraet = c.fd.geraet; save();
     closeSheet(); tab = 'ps'; render(); toast('Spritzung gestartet – nach dem Spritzen auf „Beenden“ tippen.');
   }
-  function psCancel(){ delete S.ui.psDraft; save(); closeSheet(); render(); toast('Spritzung verworfen'); }
+  function psCancel(){ trkStop(); delete S.ui.psDraft; save(); closeSheet(); render(); toast('Spritzung verworfen'); }
   function psSave(){
     const c = psRead(), fd = c.fd;
     if (!c.wbs.length) return formError('Bitte mindestens einen Weinberg wählen.');
@@ -1478,19 +1544,203 @@ const App = (() => {
     if (!c.ha) return formError('Bitte die Fläche eintragen (bei den Weinbergen fehlt die Fläche).');
     const datum = fd.datum || today(), sid = uid(), now = new Date().toISOString();
     const scale = c.haSum ? c.ha / c.haSum : 1, ps = [], arbeiten = [];
+    const det = gpsDetect(), review = [];
     c.wbs.forEach((w, wi) => {
       const ha = (num(w.Flaeche_ha) || (c.ha / c.wbs.length)) * (c.haSum ? scale : 1);
       c.mittel.forEach(({ m, a }, mi) => ps.push({ PS_ID: `${sid}-${wi}-${mi}`, Spritzung_ID: sid, Datum: datum, Beginn: `${datum}T${fd.beginn}`, Ende: fd.ende ? `${datum}T${fd.ende}` : '',
         Weinberg_ID: w.Weinberg_ID, Weinberg: w.Name, Flurstueck: [w.Gemarkung, w.Flur ? 'Flur ' + w.Flur : '', w.Flurstueck].filter(Boolean).join(' '), Flaeche_ha: +ha.toFixed(4),
         Kultur: KULTUR, Mittel: m.Mittel, Zulassungsnummer: m.Zulassungsnummer || '', Aufwand_je_ha: +(a * c.faktor).toFixed(4), Einheit: m.Einheit || '', Menge: +(a * c.faktor * ha).toFixed(4),
         Faktor: c.faktor, Wasser_L_je_ha: c.wasser, Entwicklungsstadium: fd.bbch || '', Schaderreger: fd.schad || '', Anwender: fd.anwender || S.name || '', Geraet: fd.geraet || '', Notiz: fd.notiz || '', Erfasst_am: now }));
-      const f = frame(w);
-      if (f) arbeiten.push({ Arbeit_ID: `${sid}-a${wi}`, Datum: datum, Weinberg_ID: w.Weinberg_ID, Weinberg: w.Name, Arbeit: 'Pflanzenschutz', Anteil_Prozent: 100,
+      const f = frame(w), gx = det.find(x => x.w.Weinberg_ID === w.Weinberg_ID);
+      if (gx) review.push({ id: w.Weinberg_ID, arbeit: 'Pflanzenschutz', segs: gx.segs, sid: `${sid}-a${wi}`, datum, person: fd.anwender || S.name || '', notiz: c.mittel.map(x => x.m.Mittel).join(', ') });
+      else if (f) arbeiten.push({ Arbeit_ID: `${sid}-a${wi}`, Datum: datum, Weinberg_ID: w.Weinberg_ID, Weinberg: w.Name, Arbeit: 'Pflanzenschutz', Anteil_Prozent: 100,
         Reihen: JSON.stringify(f.rows.map((r, i) => [i, 0, 1])), Person: fd.anwender || S.name || '', Notiz: c.mittel.map(x => x.m.Mittel).join(', '), Erfasst_am: now });
     });
-    S.ui.wasser = c.wasser; S.ui.tank = c.tank; S.ui.geraet = fd.geraet; delete S.ui.psDraft;
+    S.ui.wasser = c.wasser; S.ui.tank = c.tank; S.ui.geraet = fd.geraet; trkStop(); delete S.ui.psDraft;
+    S.ui.psReview = (S.ui.psReview || []).concat(review);
     queueOp({ id: sid, ps, arbeiten }, 'Spritzung dokumentiert');
     closeSheet(); tab = 'ps'; render();
+    if (review.length) psReviewNext();
+  }
+  function psReviewNext(){
+    const r = (S.ui.psReview || [])[0]; if (!r) { tab = 'ps'; return render(); }
+    if (!wbById(r.id)) { S.ui.psReview.shift(); save(); return psReviewNext(); }
+    wbUI.id = r.id; wbUI.arbeit = r.arbeit || 'Pflanzenschutz'; wbUI.marks = [{ segs: r.segs, erase: false }]; wbUI.erase = false; wbUI.review = r;
+    openWeinberg(r.id);
+  }
+
+  /* =====================================================================
+     GPS-Spuren beim Spritzen
+     ===================================================================== */
+  let gpsWatch = null, wakeLock = null, gpsLast = null, liveT = 0;
+  function curJob(){
+    if (S.ui.psDraft && S.ui.psDraft.trk) return { kind: 'ps', d: S.ui.psDraft, t: S.ui.psDraft.trk, arbeit: 'Pflanzenschutz' };
+    if (S.ui.job) return { kind: 'job', d: S.ui.job, t: S.ui.job.trk, arbeit: S.ui.job.arbeit };
+    return null;
+  }
+  async function wakeOn(){ try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch (e) {} }
+  function trkStart(){
+    if (!navigator.geolocation) return toast('GPS ist auf diesem Gerät nicht verfügbar');
+    if (gpsWatch == null) gpsWatch = navigator.geolocation.watchPosition(onPos, err => { gpsLast = { err: err.code === 1 ? 'GPS nicht erlaubt – in den iPhone-Einstellungen für Safari/Standort erlauben.' : 'Kein GPS-Signal' }; liveUpdate(true); },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
+    wakeOn();
+  }
+  function trkStop(){ if (gpsWatch != null) { try { navigator.geolocation.clearWatch(gpsWatch); } catch (e) {} gpsWatch = null; } if (wakeLock) { try { wakeLock.release(); } catch (e) {} wakeLock = null; } gpsLast = null; }
+  function onPos(p){
+    const j = curJob(); if (!j) return; const d = { trk: j.t };
+    const c = p.coords; gpsLast = { lat: c.latitude, lng: c.longitude, acc: c.accuracy, t: Date.now() };
+    if (!d.trk.paused && c.accuracy <= 25) {
+      d.trk.pts.push([+c.latitude.toFixed(6), +c.longitude.toFixed(6), Math.round(c.accuracy), Math.round((p.timestamp || Date.now()) / 1000)]);
+      if (d.trk.pts.length % 5 === 0) save();
+    }
+    liveUpdate();
+  }
+  function trkPause(){
+    const j = curJob(), t = j && j.t; if (!t) return;
+    t.paused = !t.paused; t.pts.push(0); save();
+    toast(t.paused ? 'Aufzeichnung pausiert' : 'Aufzeichnung läuft weiter'); liveUpdate(true);
+  }
+  /* Punkt → Rahmen-Koordinaten des Weinbergs; Spuren → befahrene Gassen → Reihen */
+  function distSeg(p, a, b){ const dx = b[0]-a[0], dy = b[1]-a[1], l = dx*dx + dy*dy; let t = l ? ((p[0]-a[0])*dx + (p[1]-a[1])*dy) / l : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0]-a[0]-t*dx, p[1]-a[1]-t*dy); }
+  function nearPoly(p, polys, buf){ return polys.some(pl => inPoly(p, pl) || pl.some((a, i) => distSeg(p, a, pl[(i+1) % pl.length]) < buf)); }
+  const median = a => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+  function trackSegs(w, pts, perSide, arbeit){
+    const f = frame(w); if (!f || !f.toF || !pts || !pts.length) return { segs: [], passes: 0 };
+    const chunks = []; let cur = [], lastT = 0, secs = 0;
+    const flush = () => { if (cur.length) chunks.push(cur); cur = []; };
+    pts.forEach(p => {
+      if (!p) return flush();
+      const q = f.toF([p[0], p[1]]);
+      if (!nearPoly(q, f.polys, 4)) { lastT = 0; return flush(); }
+      if (lastT && p[3] - lastT > 30) flush();
+      else if (lastT && cur.length) secs += p[3] - lastT;
+      lastT = p[3]; cur.push(q);
+    });
+    flush();
+    // in Durchfahrten teilen: Richtungswechsel längs der Reihe oder Gassenwechsel
+    const passes = [];
+    chunks.forEach(ch => {
+      let pass = [ch[0]], dir = 0, ext = ch[0][0], off = 0;
+      for (let i = 1; i < ch.length; i++) {
+        const p = ch[i], ym = median(pass.slice(-8).map(q => q[1]));
+        const nd = p[0] > ext + 3 ? 1 : p[0] < ext - 3 ? -1 : 0;
+        off = Math.abs(p[1] - ym) > f.sp * 1.1 ? off + 1 : 0;
+        const turn = dir && nd && nd !== dir, jump = off >= 3 && pass.length > 4;
+        if (turn || jump) { const back = jump ? pass.splice(-2) : []; passes.push(pass); pass = back.concat([p]); dir = 0; ext = p[0]; off = 0; continue; }
+        if (nd) { dir = dir || nd; }
+        if ((dir >= 0 && p[0] > ext) || (dir < 0 && p[0] < ext)) ext = p[0];
+        pass.push(p);
+      }
+      passes.push(pass);
+    });
+    const segs = [], lim = f.sp * (perSide - 0.5) + f.sp * 0.35, gassen = new Set(), G = isGasse(arbeit) ? gasseFrame(f) : null;
+    passes.forEach(ps => {
+      if (ps.length < 3) return;
+      const xs = ps.map(p => p[0]), x0 = Math.min(...xs), x1 = Math.max(...xs); if (x1 - x0 < 4) return;
+      const ym = median(ps.map(p => p[1])); gassen.add(Math.round(ym / f.sp - 0.5));
+      if (G) { // Bodenarbeit: die eine Gasse, in der man fährt
+        let gi = -1, bd = f.sp * 0.6; G.rows.forEach((r, i) => { const dd = Math.abs(r.y - ym); if (dd < bd && x1 > r.x0 && x0 < r.x1) { bd = dd; gi = i; } });
+        if (gi >= 0) { const r = G.rows[gi], L = r.x1 - r.x0; let a = Math.max(0, (x0 - r.x0) / L - 0.02), b = Math.min(1, (x1 - r.x0) / L + 0.02); if (a < 0.08) a = 0; if (b > 0.92) b = 1; if (b - a > 0.03) segs.push([gi, +a.toFixed(3), +b.toFixed(3)]); }
+        return;
+      }
+      f.rows.forEach((r, i) => {
+        if (Math.abs(r.y - ym) > lim) return;
+        const L = r.x1 - r.x0; let a = (x0 - r.x0) / L - 0.02, b = (x1 - r.x0) / L + 0.02;
+        a = Math.max(0, a); b = Math.min(1, b); if (a < 0.08) a = 0; if (b > 0.92) b = 1;
+        if (b - a > 0.03) segs.push([i, +a.toFixed(3), +b.toFixed(3)]);
+      });
+    });
+    const m = segsToRows(segs), out = [];
+    m.forEach((iv, i) => iv.forEach(x => out.push([i, +x[0].toFixed(3), +x[1].toFixed(3)])));
+    return { segs: out, passes: gassen.size, pct: pctOf(G || f, m), stunden: Math.round(secs / 360) / 10 };
+  }
+  function gpsDetect(){
+    const j = curJob(); if (!j) return [];
+    return wbList().map(w => Object.assign({ w }, trackSegs(w, j.t.pts, j.t.seite || 1, j.arbeit))).filter(x => x.segs.length);
+  }
+  function wbAt(lat, lng){ return wbList().find(w => { const f = frame(w); return f && f.toF && nearPoly(f.toF([lat, lng]), f.polys, 3); }); }
+  function liveHTML(){
+    const j = curJob(); if (!j) return '';
+    const t = j.t, g = gpsLast, A = j.arbeit;
+    const here = g && g.lat != null ? wbAt(g.lat, g.lng) : null;
+    let pic = '';
+    if (here) {
+      const r = trackSegs(here, t.pts, t.seite || 1, A), f0 = frame(here), f = frameFor(here, A), bf = bigFrame(f, Math.min(window.innerWidth, 560) - 64);
+      const q = f0.toF([g.lat, g.lng]);
+      pic = `<div class="wb-box" style="touch-action:auto">${wbSVG(here, { big: true, arbeit: A, cov: coverage(here, A), marks: [r.segs], frame: bf.f, dot: [q[0], q[1] * bf.k] })}</div>
+        <div class="prog"><span><b>${esc(here.Name)}</b> · ${r.passes} Gasse${r.passes === 1 ? '' : 'n'} heute</span><b>${Math.round(r.pct || 0)} %</b></div>`;
+    } else pic = `<p class="note" style="margin:12px 0">${g && g.err ? '⚠️ ' + esc(g.err) : g ? 'Du bist gerade in keinem angelegten Weinberg.' : 'Warte auf GPS …'}</p>`;
+    const acc = g && g.acc != null ? `GPS ±${Math.round(g.acc)} m${g.acc > 25 ? ' – zu ungenau, wird nicht aufgezeichnet' : ''}` : '';
+    return `<div class="live ${t.paused ? 'paused' : ''}">
+      <div class="livehead"><span class="dotrec"></span><b>${esc(A)} · ${t.paused ? 'pausiert' : 'Aufzeichnung läuft'}</b><small>${acc}</small></div>
+      ${pic}
+      <button class="btn bigpause" onclick="App.trkPause()">${t.paused ? '▶ Weiter aufzeichnen' : j.kind === 'ps' ? '⏸ Pause (z. B. Tank leer)' : '⏸ Pause'}</button>
+      <p class="note">Display anlassen: Im Hintergrund oder bei gesperrtem iPhone bekommt die App kein GPS.</p></div>`;
+  }
+  function liveUpdate(force){
+    const els = document.querySelectorAll('.liveslot'); if (!els.length) return;
+    const now = Date.now(); if (!force && now - liveT < 1500) return; liveT = now;
+    const h = liveHTML(); els.forEach(el => el.innerHTML = h);
+  }
+
+  /* ---------- Schlepperarbeit mit GPS ---------- */
+  function jobForm(arbeit){
+    if (S.ui.psDraft) return toast('Es läuft gerade eine Spritzung.');
+    if (S.ui.job) return jobFinish();
+    const A = arbeit && isSchlepper(arbeit) && arbeit !== 'Pflanzenschutz' ? arbeit : (S.ui.lastJob || 'Mulchen');
+    const list = ARBEITEN.filter(x => x[2] !== 'h' && x[0] !== 'Pflanzenschutz');
+    openSheet(`<h2>🚜 Schlepperarbeit</h2><p class="lead">Arbeit wählen und einfach losfahren – die App erkennt die Weinberge und zeichnet die Gassen auf.</p>
+      <form id="frm" onsubmit="event.preventDefault();App.jobStart()"><p id="frmErr" class="note warn" hidden></p>
+        <div class="checks jobpick">${list.map(([n, c, k]) => `<label><input type="radio" name="arbeit" value="${esc(n)}" ${n === A ? 'checked' : ''}><i style="background:${c}"></i>${esc(n)}<small>${k === 'g' ? 'Gasse' : 'an der Reihe'}</small></label>`).join('')}</div>
+        ${field('Bearbeitet je Seite (bei Arbeiten an der Reihe)', `<select name="seite">${opts(['1 Reihe', '2 Reihen'], (S.ui.jobSeite || 1) === 2 ? '2 Reihen' : '1 Reihe')}</select>`)}
+        <button class="btn" type="submit">▶ Aufzeichnung starten</button>
+        <button class="btn sec" type="button" onclick="App.psForm()">💧 Pflanzenschutz – zur Spritzung</button>
+        <button class="btn sec" type="button" onclick="App.closeSheet()">Abbrechen</button>
+        <p class="note">Display anlassen. Mit „Pause“ unterbrichst du (Defekt, Mittag) – bei Feierabend einfach „Beenden“, der Fortschritt bleibt erhalten.</p></form>`);
+  }
+  function jobStart(){
+    const fd = Object.fromEntries(new FormData($('#frm')).entries());
+    if (!fd.arbeit) return formError('Bitte eine Arbeit wählen.');
+    const seite = fd.seite === '2 Reihen' ? 2 : 1;
+    S.ui.lastJob = fd.arbeit; S.ui.jobSeite = seite;
+    S.ui.job = { arbeit: fd.arbeit, beginn: nowTime(), datum: today(), trk: { pts: [], paused: false, seite } };
+    save(); trkStart(); closeSheet(); mode = 'weinberg'; S.ui.mode = mode; tab = 'wb'; render(); window.scrollTo(0, 0);
+    toast(`${fd.arbeit}: Aufzeichnung läuft – einfach losfahren`);
+  }
+  function jobFinish(){
+    const jb = S.ui.job; if (!jb) return;
+    const det = gpsDetect();
+    openSheet(`<h2>${esc(jb.arbeit)} beenden?</h2><p class="lead">seit ${esc(jb.beginn)} Uhr${jb.datum !== today() ? ' am ' + fmtDate(jb.datum) : ''}</p>
+      <div class="card" style="padding:10px 12px;margin-bottom:14px"><b>📍 Erkannt</b><br>${det.length ? det.map(x => `${esc(x.w.Name)}: ${x.passes} Gasse${x.passes === 1 ? '' : 'n'}, ca. ${Math.round(x.pct)} %${x.stunden ? ', ' + fmtNum(x.stunden) + ' h' : ''}`).join('<br>') : '<span style="color:var(--muted)">noch kein Weinberg</span>'}</div>
+      <button class="btn" onclick="App.jobEnd()">${det.length ? 'Beenden & Spuren prüfen' : 'Beenden'}</button>
+      <button class="btn sec" onclick="App.closeSheet()">Weiter aufzeichnen</button>
+      <button class="btn sec" onclick="App.jobCancel(this)">Aufzeichnung verwerfen</button>`);
+  }
+  function jobEnd(){
+    const jb = S.ui.job; if (!jb) return;
+    const det = gpsDetect(), base = uid();
+    const review = det.map((x, i) => ({ id: x.w.Weinberg_ID, arbeit: jb.arbeit, segs: x.segs, sid: `${base}-${i}`, datum: jb.datum, person: S.name || '', notiz: 'per GPS', stunden: x.stunden || null }));
+    trkStop(); delete S.ui.job;
+    S.ui.psReview = (S.ui.psReview || []).concat(review); save();
+    closeSheet(); render();
+    if (review.length) psReviewNext(); else toast('Beendet – kein Weinberg erkannt');
+  }
+  function jobCancel(btn){
+    if (!btn.dataset.sure) { btn.dataset.sure = 1; btn.textContent = 'Wirklich verwerfen?'; btn.classList.add('danger'); return; }
+    trkStop(); delete S.ui.job; save(); closeSheet(); render(); toast('Aufzeichnung verworfen');
+  }
+
+  /* ---------- Startseite ---------- */
+  function viewHome(){
+    const h = new Date().getHours(), gruss = h < 11 ? 'Guten Morgen' : h < 18 ? 'Hallo' : 'Guten Abend';
+    const bel = S.snap.behaelter.filter(f => f.Aktuelle_Weinnummer), liter = bel.reduce((s, f) => s + (num(f.Fuellstand_L) || 0), 0);
+    const wbs = wbList(), ha = wbs.reduce((s, w) => s + (num(w.Flaeche_ha) || 0), 0);
+    return `<div class="home"><h1>${gruss}${S.name ? ', ' + esc(S.name) : ''}</h1><p class="lead">Wo arbeitest du gerade?</p>
+      ${S.ui.job ? `<button class="running job" style="width:100%;text-align:left" onclick="App.setMode('weinberg')">🚜 <div><b>${esc(S.ui.job.arbeit)} läuft</b><br><small>seit ${esc(S.ui.job.beginn)} Uhr – hier tippen</small></div></button>` : ''}
+      ${S.ui.psDraft ? `<button class="running" style="width:100%;text-align:left" onclick="App.setMode('weinberg');App.go('ps')">💧 <div><b>Spritzung läuft</b><br><small>seit ${esc(S.ui.psDraft.beginn)} Uhr – hier tippen</small></div></button>` : ''}
+      <button class="homecard keller" onclick="App.setMode('keller')"><span class="hc-ico">🍷</span><span><b>Keller</b><small>${bel.length} Fässer belegt · ${fmtNum(liter, 0)} L</small></span></button>
+      <button class="homecard weinberg" onclick="App.setMode('weinberg')"><span class="hc-ico">🍇</span><span><b>Weinberg</b><small>${wbs.length} Weinberge · ${fmtHa(ha) || '0 ha'}</small></span></button>
+      ${(S.ui.psReview || []).length ? `<button class="btn sec" onclick="App.setMode('weinberg');App.psReviewNext()">GPS-Spuren prüfen (${S.ui.psReview.length})</button>` : ''}</div>`;
   }
 
   /* ---------- Demo-Weinberge ---------- */
@@ -1533,17 +1783,18 @@ const App = (() => {
 
   /* ---------- Start ---------- */
   function init(){
-    ensure(); render(); route();
+    ensure(); if (!location.hash) tab = 'home'; render(); route();
+    if (curJob()) trkStart();
     window.addEventListener('hashchange', route);
     window.addEventListener('online', () => syncNow(false));
     window.addEventListener('offline', renderSync);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) syncNow(false); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) { syncNow(false); if (curJob()) wakeOn(); } });
     setInterval(() => syncNow(false), 120000);
     syncNow(false);
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 
-  return { init, go, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
+  return { init, go, trkPause, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
 })();
 App.init();
 </script>
