@@ -1243,13 +1243,13 @@ const App = (() => {
     f.rows.forEach((r, i) => { tot += r.len; (rowsMap.get(i) || []).forEach(iv => cov += (iv[1] - iv[0]) * r.len); });
     return tot ? Math.min(100, 100 * cov / tot) : 0;
   }
+  const isFertig = a => a.Abgeschlossen === true || /^(ja|true|1|x)$/i.test(String(a.Abgeschlossen || '').trim());
   function coverage(w, arbeit, sea){
     sea = sea || selSaison();
-    const segs = [];
-    S.snap.arbeiten.filter(a => a.Weinberg_ID === w.Weinberg_ID && a.Arbeit === arbeit && inSaison(a.Datum, sea))
-      .forEach(a => jparse(a.Reihen, []).forEach(s => segs.push(s)));
-    const map = segsToRows(segs);
-    return { map, pct: pctOf(frameFor(w, arbeit), map) };
+    const segs = [], list = S.snap.arbeiten.filter(a => a.Weinberg_ID === w.Weinberg_ID && a.Arbeit === arbeit && inSaison(a.Datum, sea));
+    list.forEach(a => jparse(a.Reihen, []).forEach(s => segs.push(s)));
+    const map = segsToRows(segs), done = list.some(isFertig);
+    return { map, done, pct: done ? 100 : pctOf(frameFor(w, arbeit), map) };
   }
 
   /* ---------- Zeichnen ---------- */
@@ -1440,6 +1440,7 @@ const App = (() => {
         <div class="two">${field('Datum', `<input name="Datum" type="date" value="${rv ? esc(rv.datum) : today()}">`)}${field('Stunden', inNum('Stunden', rv && rv.stunden ? rv.stunden : null, 'optional'))}</div>
         ${field('Notiz', inTxt('Notiz', '', 'optional'))}
         <div class="btnrow"><button class="btn sec small" type="button" onclick="App.wbAll()">Ganzer Weinberg</button></div>
+        <div id="wbFertig"></div>
         <button class="btn" type="submit" id="wbSaveBtn">Speichern</button></form>`
       : w.Status === 'unbestockt' ? `<p class="note">🌱 Unbestockte Fläche – keine Reihen. Wenn hier gepflanzt wird: unter „Umriss & Reihen“ die Reihen anlegen und speichern.</p>`
       : `<p class="note">Für diesen Weinberg sind noch keine Reihen angelegt. Zeichne den Umriss auf der Karte – oder trag unter „Daten bearbeiten“ einfach die Anzahl der Reihen ein.</p>`}
@@ -1447,10 +1448,14 @@ const App = (() => {
       <div id="wbAufgBlock"><div class="log-day" style="margin-top:16px">⚠️ Offen in diesem Weinberg</div>
         ${wbOffen(id).length ? `<div class="card">${wbOffen(id).map(a => wbAufgRow(a, false)).join('')}</div>` : ''}
         <button class="btn sec small" style="margin-top:8px" onclick="App.wbAufgForm('', '${esc(id)}')">+ Schaden / Aufgabe melden</button></div>
-      ${hist.length ? `<div class="log-day" style="margin-top:16px">Arbeiten ${sea.label}</div><div class="card">${hist.map(a => `<div class="row"><span class="swatch" style="background:${arbeitFarbe(a.Arbeit)}"></span><div class="main"><div class="title">${esc(a.Arbeit)}</div><div class="sub">${fmtDate(a.Datum)} · ${fmtNum(a.Anteil_Prozent, 0)} %${num(a.Stunden) ? ' · ' + fmtNum(a.Stunden) + ' h' : ''}${a.Person ? ' · ' + esc(a.Person) : ''}${a.Notiz ? ' · ' + esc(a.Notiz) : ''}</div></div>${a.Arbeit === 'Pflanzenschutz' ? '' : `<button class="btn sec small del" onclick="App.wbDelArbeit('${esc(a.Arbeit_ID)}',this)">🗑</button>`}</div>`).join('')}</div>` : ''}`);
-    if (f) { gpsBtn(); wbDraw(); }
+      ${hist.length ? `<div class="log-day" style="margin-top:16px">Arbeiten ${sea.label}</div><div class="card">${hist.map(a => `<div class="row"><span class="swatch" style="background:${arbeitFarbe(a.Arbeit)}"></span><div class="main"><div class="title">${esc(a.Arbeit)}</div><div class="sub">${fmtDate(a.Datum)} · ${fmtNum(a.Anteil_Prozent, 0)} %${isFertig(a) ? ' · ✓ abgeschlossen' : ''}${num(a.Stunden) ? ' · ' + fmtNum(a.Stunden) + ' h' : ''}${a.Person ? ' · ' + esc(a.Person) : ''}${a.Notiz ? ' · ' + esc(a.Notiz) : ''}</div></div>${a.Arbeit === 'Pflanzenschutz' ? '' : `<button class="btn sec small del" onclick="App.wbDelArbeit('${esc(a.Arbeit_ID)}',this)">🗑</button>`}</div>`).join('')}</div>` : ''}`);
+    if (f) { gpsBtn(); fertigBox(); wbDraw(); }
   }
-  function wbArbeit(a){ if (isGasse(a) !== isGasse(wbUI.arbeit)) wbUI.marks = []; wbUI.arbeit = a; document.querySelectorAll('#sheetBody .chips button').forEach(b => b.classList.toggle('on', b.textContent.trim() === a)); gpsBtn(); wbDraw(); }
+  /* „Fertig“-Haken: Arbeit gilt in diesem Weinberg als abgeschlossen, auch wenn nicht jede Reihe/Gasse dran war */
+  function fertigBox(){ const el = $('#wbFertig'); if (!el) return; const w = wbById(wbUI.id), a = wbUI.arbeit;
+    el.innerHTML = w && coverage(w, a).done ? `<p class="note" style="margin:8px 0">✓ ${esc(a)} ist in dieser Saison als abgeschlossen markiert. Zum Aufheben den Eintrag mit ✓ unten löschen.</p>`
+      : `<label class="gpsopt"><input type="checkbox" name="fertig" onchange="App.wbDrawNow()"><span>✓ ${esc(a)} ist hier damit <b>abgeschlossen</b><br><small style="font-weight:400;color:var(--muted,#7A6A61)">z. B. wenn nur jede 2. Gasse bearbeitet wird – zählt dann als 100 %. Geht auch ohne Markierung.</small></span></label>`; }
+  function wbArbeit(a){ if (isGasse(a) !== isGasse(wbUI.arbeit)) wbUI.marks = []; wbUI.arbeit = a; document.querySelectorAll('#sheetBody .chips button').forEach(b => b.classList.toggle('on', b.textContent.trim() === a)); gpsBtn(); fertigBox(); wbDraw(); }
   function gpsBtn(){ const el = $('#wbGps'); if (!el) return; const a = wbUI.arbeit;
     el.innerHTML = !isSchlepper(a) || wbUI.review || !selSaison().current ? '' : a === 'Pflanzenschutz' ? `<button class="btn sec" onclick="App.psForm()">💧 Spritzung planen & mit GPS starten</button>`
       : `<button class="btn sec" onclick="App.jobForm('${a}')">🚜 ${esc(a)} mit GPS aufzeichnen</button>`; }
@@ -1481,7 +1486,7 @@ const App = (() => {
     document.querySelectorAll('#wbTools button[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === (wbUI.list ? 'list' : 'map')));
     const er = $('#wbErase'); if (er) er.classList.toggle('on', !!wbUI.erase);
     const und = $('#wbUndoBtn'); if (und) und.disabled = !wbUI.marks.length;
-    const btn = $('#wbSaveBtn'); if (btn) { btn.disabled = !segs.length; btn.style.opacity = segs.length ? 1 : .45; btn.textContent = segs.length ? `Speichern (${neu.size} ${f.gasse ? 'Gasse' + (neu.size === 1 ? '' : 'n') : f.seiten ? (neu.size === 1 ? 'Laubwand' : 'Laubwände') : 'Reihe' + (neu.size === 1 ? '' : 'n')})` : 'Speichern'; }
+    const btn = $('#wbSaveBtn'), fc = document.querySelector('#frm [name=fertig]'), ok = segs.length || (fc && fc.checked); if (btn) { btn.disabled = !ok; btn.style.opacity = ok ? 1 : .45; btn.textContent = segs.length ? `Speichern (${neu.size} ${f.gasse ? 'Gasse' + (neu.size === 1 ? '' : 'n') : f.seiten ? (neu.size === 1 ? 'Laubwand' : 'Laubwände') : 'Reihe' + (neu.size === 1 ? '' : 'n')})` : 'Speichern'; }
     box.classList.toggle('erase', !!wbUI.erase); box.classList.toggle('list', !!wbUI.list);
     if (wbUI.list) return drawList(w, f, cov);
     const bf = bigFrame(f, Math.max(200, box.clientWidth - 16));
@@ -1550,12 +1555,12 @@ const App = (() => {
   function wbEraseToggle(){ wbUI.erase = !wbUI.erase; wbDraw(); }
   function wbSave(){
     const w = wbById(wbUI.id), f = frameFor(w, wbUI.arbeit), segs = netSegs();
-    if (!segs.length) return formError('Erst die bearbeiteten Reihen markieren.');
     const fd = Object.fromEntries(new FormData($('#frm')).entries());
+    if (!segs.length && !fd.fertig) return formError('Erst die bearbeiteten Reihen markieren – oder „abgeschlossen“ anhaken.');
     const map = segsToRows(segs), rv = wbUI.review && wbUI.review.id === w.Weinberg_ID ? wbUI.review : null, id = rv ? rv.sid : uid();
     queueOp({ id, arbeiten: [{ Arbeit_ID: id, Datum: fd.Datum || today(), Weinberg_ID: w.Weinberg_ID, Weinberg: w.Name, Arbeit: wbUI.arbeit,
-      Anteil_Prozent: +pctOf(f, map).toFixed(1), Reihen: JSON.stringify(segs), Stunden: num(fd.Stunden), Person: rv ? rv.person : (S.name || ''), Notiz: [rv ? rv.notiz : '', fd.Notiz || ''].filter(Boolean).join(' · '), Erfasst_am: new Date().toISOString() }] },
-      `${wbUI.arbeit}: ${map.size} ${f.gasse ? 'Gassen' : f.seiten ? 'Laubwände' : 'Reihen'} gespeichert`);
+      Anteil_Prozent: +pctOf(f, map).toFixed(1), Reihen: JSON.stringify(segs), Stunden: num(fd.Stunden), Person: rv ? rv.person : (S.name || ''), Notiz: [rv ? rv.notiz : '', fd.Notiz || ''].filter(Boolean).join(' · '), Abgeschlossen: fd.fertig ? 'ja' : '', Erfasst_am: new Date().toISOString() }] },
+      fd.fertig && !segs.length ? `${wbUI.arbeit}: als abgeschlossen markiert` : `${wbUI.arbeit}: ${map.size} ${f.gasse ? 'Gassen' : f.seiten ? 'Laubwände' : 'Reihen'} gespeichert${fd.fertig ? ' · abgeschlossen' : ''}`);
     wbUI.marks = []; wbUI.erase = false;
     if (rv) { wbUI.review = null; S.ui.psReview = (S.ui.psReview || []).filter(x => x !== rv && x.sid !== rv.sid); save(); if (S.ui.psReview.length) return psReviewNext(); closeSheet(); tab = 'ps'; return render(); }
     openWeinberg(w.Weinberg_ID);
@@ -2997,7 +3002,7 @@ const App = (() => {
   }
 
   return { init, go, wbMapMe, wbMapFit, kEcken, kCutStart, kCutPick, restNeu, wbTab, wbAufgForm, wbAufgGps, wbAufgSave, wbAufgDone, fassView, planTap, planSide, planStart, planCancel, planDoor, planSave, pdfShare, openArtikel, artikelForm, artikelSave, artikelAus, flBuchen, flSave, bestForm, bestKunde, bestCalc, bestSave, openBest, bestAbgeholt, bestBezahlt, bestStorno,
-    openKunde, kundeForm, kundeSave, kSuche, verkaufNew, schnellVerkauf, leseForm, leseCheck, leseSave, printMenu, printRun, printLager: () => printLager(), printBest, printKunde, aufgForm, aufgSave, aufgDone, aufgEintragen, saisonPick, setSaison, wbSorte, handPick, jobManual, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, wbStandView, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
+    openKunde, kundeForm, kundeSave, kSuche, verkaufNew, schnellVerkauf, leseForm, leseCheck, leseSave, printMenu, printRun, printLager: () => printLager(), printBest, printKunde, aufgForm, aufgSave, aufgDone, aufgEintragen, saisonPick, setSaison, wbSorte, handPick, jobManual, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, wbStandView, wbDrawNow: () => wbDraw(), openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
 })();
 App.init();
 </script>
