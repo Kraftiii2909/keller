@@ -265,6 +265,9 @@ textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px
 .chipradio input:checked+span{background:var(--ink);color:#fff;border-color:var(--ink)}
 .wb-card .title .tbadge{vertical-align:2px}
 .kpt span{display:block;width:22px;height:22px;margin:4px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.wbmap{height:62vh;border-radius:16px;overflow:hidden;background:#DDD3C3}
+.wbtip{background:rgba(42,26,30,.78);color:#fff;border:0;box-shadow:none;font-weight:600;font-size:12px;padding:2px 6px}.wbtip:before{display:none}
+.leaflet-popup-content{font-size:14px;line-height:1.4}
 </style>
 </head>
 <body>
@@ -1284,7 +1287,8 @@ const App = (() => {
   }
   function viewWB(){
     const nA = wbOffen().length;
-    const wsw = `<div class="mapctl" style="margin-bottom:12px">${[['liste', 'Übersicht'], ['aufg', `Aufgaben & Schäden${nA ? ' (' + nA + ')' : ''}`]].map(([k, t]) => `<button type="button" class="${(S.ui.wbTab || 'liste') === k ? 'on' : ''}" onclick="App.wbTab('${k}')">${t}</button>`).join('')}</div>`;
+    const wsw = `<div class="mapctl" style="margin-bottom:12px">${[['liste', 'Übersicht'], ['karte', '🛰️ Karte'], ['aufg', `Aufgaben${nA ? ' (' + nA + ')' : ''}`]].map(([k, t]) => `<button type="button" class="${(S.ui.wbTab || 'liste') === k ? 'on' : ''}" onclick="App.wbTab('${k}')">${t}</button>`).join('')}</div>`;
+    if (S.ui.wbTab === 'karte') { setTimeout(initWbMap, 30); return `${runningBanner()}<div class="section-title"><h2>Weinberge</h2></div>${wsw}${viewWBKarte()}`; }
     if (S.ui.wbTab === 'aufg') return `${runningBanner()}<div class="section-title"><h2>Weinberge</h2></div>${wsw}${viewWBAufg()}`;
     const all = wbList(), A = wbUI.arbeit;
     const sorten = [...new Set(all.map(w => String(w.Rebsorte || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
@@ -2823,6 +2827,56 @@ const App = (() => {
     }).filter(Boolean);
   }
 
+  /* ---------- Übersichtskarte aller Weinberge ---------- */
+  const SORTEN_FARBEN = ['#F0B35A', '#E0617A', '#7FD1AE', '#8AB4F8', '#C58AF9', '#F28B50', '#FDD663', '#78D9EC', '#F6AEA9', '#A8DAB5'];
+  function sortenFarbe(){ const m = new Map(); [...new Set(wbList().map(w => String(w.Rebsorte || '–').trim()))].sort().forEach((r, i) => m.set(r, SORTEN_FARBEN[i % SORTEN_FARBEN.length])); return m; }
+  let wbMap = null;
+  function viewWBKarte(){
+    const fm = sortenFarbe(), ohne = wbList().filter(w => !polysOf(w.Umriss).length);
+    return `<div class="pleg-wrap">${[...fm.entries()].map(([r, c]) => `<span class="pleg"><i style="background:${c}"></i>${esc(r)}</span>`).join('')}</div>
+      <div id="wbMap" class="wbmap">Karte lädt …</div>
+      <div class="btnrow" style="margin-top:10px"><button class="btn sec small" onclick="App.wbMapMe()">📍 Wo bin ich?</button><button class="btn sec small" onclick="App.wbMapFit()">⤢ Alle zeigen</button></div>
+      ${ohne.length ? `<p class="note">Noch ohne Umriss: ${ohne.map(w => `<a href="#" onclick="event.preventDefault();App.openKarte('${esc(w.Weinberg_ID)}')">${esc(w.Name)}</a>`).join(', ')}</p>` : ''}`;
+  }
+  async function initWbMap(){
+    const el = $('#wbMap'); if (!el) return;
+    try { await loadLeaflet(); } catch (e) { el.innerHTML = '<p class="note" style="margin:12px">Die Karte braucht Internet.</p>'; return; }
+    if (wbMap) { try { wbMap.remove(); } catch (e) {} wbMap = null; }
+    el.innerHTML = '';
+    const yr = new Date().getFullYear();
+    const map = wbMap = L.map(el, { zoomControl: true });
+    const esri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20, maxNativeZoom: 19, attribution: 'Luftbild © Esri, Maxar' });
+    const rlp = L.tileLayer.wms('https://geo4.service24.rlp.de/wms/rp_dop20.fcgi', { layers: 'rp_dop20', format: 'image/jpeg', maxZoom: 21, attribution: `©GeoBasis-DE / LVermGeoRP ${yr}, dl-de/by-2-0` });
+    const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+    const flur = L.tileLayer.wms('https://geo4.service24.rlp.de/wms/rp_lika_basis.fcgi', { layers: 'rp_lika_basis', format: 'image/png', transparent: true, maxZoom: 21, attribution: `Flurstücke ©GeoBasis-DE / LVermGeoRP ${yr}` });
+    (S.ui.mapLayer === 'rlp' ? rlp : S.ui.mapLayer === 'osm' ? osm : esri).addTo(map);
+    L.control.layers({ 'Luftbild (Esri)': esri, 'Luftbild RLP': rlp, 'Karte': osm }, { 'Flurstücke RLP': flur }).addTo(map);
+    const fm = sortenFarbe(), all = [];
+    wbList().forEach(w => {
+      const polys = polysOf(w.Umriss).filter(p => p.length >= 3); if (!polys.length) return;
+      const col = fm.get(String(w.Rebsorte || '–').trim()) || '#F0B35A', n = wbOffen(w.Weinberg_ID).length, wz = wartezeitBis(w.Weinberg_ID);
+      polys.forEach(p => all.push(...p));
+      const lay = L.polygon(polys, { color: col, weight: 2.5, fillColor: col, fillOpacity: .35 }).addTo(map);
+      lay.bindTooltip(`${esc(w.Name)}${n ? ' ⚠️' + n : ''}`, { permanent: true, direction: 'center', className: 'wbtip' });
+      const c = polys[0].reduce((a, q) => [a[0] + q[0] / polys[0].length, a[1] + q[1] / polys[0].length], [0, 0]);
+      lay.bindPopup(`<b>${esc(w.Name)}</b><br>${[esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), w.Flurstueck ? 'Flst. ' + esc(w.Flurstueck) : ''].filter(Boolean).join(' · ')}
+        ${wz && wz >= today() ? `<br>⏳ Wartezeit bis ${fmtDate(wz)}` : ''}${n ? `<br>⚠️ ${n} offen` : ''}
+        <div style="display:flex;gap:6px;margin-top:8px"><button class="btn small" style="margin:0" onclick="App.openWeinberg('${esc(w.Weinberg_ID)}')">Öffnen</button>
+        <a class="btn sec small" style="margin:0;text-decoration:none;text-align:center" href="https://maps.apple.com/?daddr=${c[0].toFixed(6)},${c[1].toFixed(6)}" target="_blank" rel="noopener">Navigation</a></div>`);
+    });
+    wbMap._all = all;
+    if (all.length) map.fitBounds(all, { padding: [24, 24] }); else if (S.ui.mapView) map.setView(S.ui.mapView.c, S.ui.mapView.z); else map.setView([49.85, 8.2], 12);
+    setTimeout(() => map.invalidateSize(), 200);
+  }
+  function wbMapFit(){ if (wbMap && wbMap._all && wbMap._all.length) wbMap.fitBounds(wbMap._all, { padding: [24, 24] }); }
+  function wbMapMe(){
+    if (!wbMap || !navigator.geolocation) return toast('Standort nicht verfügbar');
+    navigator.geolocation.getCurrentPosition(p => { const ll = [p.coords.latitude, p.coords.longitude];
+      if (wbMap._me) wbMap.removeLayer(wbMap._me);
+      wbMap._me = L.circleMarker(ll, { radius: 8, color: '#fff', weight: 3, fillColor: '#2F6FB0', fillOpacity: 1 }).addTo(wbMap); wbMap.setView(ll, Math.max(wbMap.getZoom(), 17));
+      const w = wbAt(ll[0], ll[1]); toast(w ? `Du bist im ${w.Name}` : 'Du bist in keinem angelegten Weinberg'); }, () => toast('Standort nicht verfügbar'), { enableHighAccuracy: true, timeout: 15000 });
+  }
+
   /* ---------- Demo-Weinberge ---------- */
   function demoWeinberge(){
     const mk = (id, name, lage, sorte, c, w, h, rot, sp, extra) => {
@@ -2874,7 +2928,7 @@ const App = (() => {
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 
-  return { init, go, kEcken, kCutStart, kCutPick, restNeu, wbTab, wbAufgForm, wbAufgGps, wbAufgSave, wbAufgDone, fassView, planTap, planSide, planStart, planCancel, planDoor, planSave, pdfShare, openArtikel, artikelForm, artikelSave, artikelAus, flBuchen, flSave, bestForm, bestKunde, bestCalc, bestSave, openBest, bestAbgeholt, bestBezahlt, bestStorno,
+  return { init, go, wbMapMe, wbMapFit, kEcken, kCutStart, kCutPick, restNeu, wbTab, wbAufgForm, wbAufgGps, wbAufgSave, wbAufgDone, fassView, planTap, planSide, planStart, planCancel, planDoor, planSave, pdfShare, openArtikel, artikelForm, artikelSave, artikelAus, flBuchen, flSave, bestForm, bestKunde, bestCalc, bestSave, openBest, bestAbgeholt, bestBezahlt, bestStorno,
     openKunde, kundeForm, kundeSave, kSuche, verkaufNew, schnellVerkauf, leseForm, leseCheck, leseSave, printMenu, printRun, printLager: () => printLager(), printBest, printKunde, aufgForm, aufgSave, aufgDone, aufgEintragen, saisonPick, setSaison, wbSorte, handPick, jobManual, trkPause, jobWirk, jobForm, jobStart, jobFinish, jobEnd, jobCancel, bookFilter, psReviewNext, _gps: onPos, setMode, fab, wbNewEntry, openWeinberg, wbArbeit, wbUndo, wbAll, wbSave, wbView, wbEraseToggle, wbDelArbeit, wbEdit, wbEditSave, openKarte, kStep, kUndo, kGps, kAdj, kSave, kNew, kSearch, kPick, kDel, kMode, kQ, psForm, psCalc, psStart, psSave, psCancel, mittelForm, mittelSave, psMittelPick, wbViewArbeit, openFass, openWein, form, submit, newEntry, closeSheet, openSettings, saveSettings, disconnect, syncNow, exportJSON, toggleNeu, fillMenge, showSetupQR, copySetup, _S: () => S };
 })();
 App.init();
