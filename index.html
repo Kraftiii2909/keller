@@ -1303,7 +1303,7 @@ const App = (() => {
       return `<button class="wb-card" onclick="App.openWeinberg('${esc(w.Weinberg_ID)}')">
         <div class="wb-mini">${wbSVG(w, { arbeit: A, cov: c })}</div>
         <div class="main" style="flex:1;min-width:0"><div class="title">${esc(w.Name)} ${aufgBadge(wbOffen(w.Weinberg_ID))}</div>
-        <div class="sub">${[esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f0 ? f0.rows.length + ' Reihen' : 'noch keine Reihen'].filter(Boolean).join(' · ')}</div>
+        <div class="sub">${[esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f0 ? f0.rows.length + ' Reihen' : w.Status === 'unbestockt' ? '🌱 unbestockt' : 'noch keine Reihen'].filter(Boolean).join(' · ')}</div>
         <div class="bar"><i style="width:${c.pct.toFixed(1)}%;background:${arbeitFarbe(A)}"></i></div>${wzBadge(w.Weinberg_ID)}</div>
         <div class="right">${Math.round(c.pct)} %</div></button>`;
     }).join('');
@@ -1366,7 +1366,7 @@ const App = (() => {
     if (arch) { wbUI.list = false; wbUI.marks = []; }
     const hist = S.snap.arbeiten.filter(a => a.Weinberg_ID === id && inSaison(a.Datum, sea)).sort((a, b) => String(b.Datum).localeCompare(String(a.Datum))).slice(0, 30);
     openSheet(`<h2>${esc(w.Name)}</h2>
-      <p class="lead">${[esc(w.Lage || ''), w.Flurstueck ? 'Flst. ' + esc(w.Flurstueck) : '', esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f ? f.rows.length + ' Reihen' : ''].filter(Boolean).join(' · ')}</p>${wzBadge(w.Weinberg_ID)}
+      <p class="lead">${[esc(w.Lage || ''), w.Flurstueck ? 'Flst. ' + esc(w.Flurstueck) : '', esc(w.Rebsorte || ''), fmtHa(num(w.Flaeche_ha)), f ? f.rows.length + ' Reihen' : w.Status === 'unbestockt' ? 'unbestockt' : ''].filter(Boolean).join(' · ')}</p>${wzBadge(w.Weinberg_ID)}
       ${rv ? `<div class="running" style="background:#E7F0F8;color:var(--ink)">📍 <div><b>GPS-Spuren: ${esc(rv.arbeit || 'Pflanzenschutz')}</b><br><small>Prüfen, mit „Einzeln“ oder „Radieren“ korrigieren, dann speichern. ${(S.ui.psReview || []).length > 1 ? `(noch ${S.ui.psReview.length - 1} weitere)` : ''}</small></div></div>` : ''}
       ${f ? `${rv ? '' : arbeitChips(wbUI.arbeit, 'wbArbeit')}
       <div class="prog" id="wbProg"></div><div id="wbGps"></div>
@@ -1380,6 +1380,7 @@ const App = (() => {
         ${field('Notiz', inTxt('Notiz', '', 'optional'))}
         <div class="btnrow"><button class="btn sec small" type="button" onclick="App.wbAll()">Ganzer Weinberg</button></div>
         <button class="btn" type="submit" id="wbSaveBtn">Speichern</button></form>`
+      : w.Status === 'unbestockt' ? `<p class="note">🌱 Unbestockte Fläche – keine Reihen. Wenn hier gepflanzt wird: unter „Umriss & Reihen“ die Reihen anlegen und speichern.</p>`
       : `<p class="note">Für diesen Weinberg sind noch keine Reihen angelegt. Zeichne den Umriss auf der Karte – oder trag unter „Daten bearbeiten“ einfach die Anzahl der Reihen ein.</p>`}
       <div class="btnrow"><button class="btn sec small" onclick="App.openKarte('${esc(id)}')">🗺️ Umriss & Reihen</button><button class="btn sec small" onclick="App.wbEdit('${esc(id)}')">✏️ Daten bearbeiten</button></div>
       <div id="wbAufgBlock"><div class="log-day" style="margin-top:16px">⚠️ Offen in diesem Weinberg</div>
@@ -1518,7 +1519,8 @@ const App = (() => {
         <div class="two">${field('Lage', inTxt('Lage', w.Lage, 'Weinlage'))}${field('Pflanzjahr', inNum('Pflanzjahr', num(w.Pflanzjahr), '', '1'))}</div>
         <div class="two">${field('Fläche (ha)', inNum('Flaeche_ha', num(w.Flaeche_ha), 'kommt vom Kataster'))}${field('Zeilenbreite (m)', inNum('Zeilenbreite_m', num(w.Zeilenbreite_m) || 2))}</div>
         <div class="two">${field('Stockabstand (m)', inNum('Stockabstand_m', num(w.Stockabstand_m), 'optional'))}${field('Anzahl Reihen', inNum('Reihen_Anzahl', num(w.Reihen_Anzahl), 'nur ohne Karte', '1'))}</div>
-        ${field('Bemerkung', inTxt('Bemerkung', w.Bemerkung))}</details>
+        ${field('Bemerkung', inTxt('Bemerkung', w.Bemerkung))}
+        <label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" name="Unbestockt" ${w.Status === 'unbestockt' ? 'checked' : ''}> Unbestockt (keine Reben, keine Reihen)</label></details>
         <button class="btn" type="submit">${id ? 'Speichern' : 'Weiter: Umriss holen'}</button>
         ${id ? `<button class="btn sec" type="button" onclick="App.openKarte('${esc(id)}')">🗺️ Umriss & Reihen auf der Karte</button>` : ''}
         <button class="btn sec" type="button" onclick="App.closeSheet()">Abbrechen</button></form>`);
@@ -1529,7 +1531,8 @@ const App = (() => {
     const old = (id && wbById(id)) || {};
     const w = Object.assign({}, old, { Weinberg_ID: id || 'WB-' + uid().slice(0, 8), Name: fd.Name.trim(), Lage: fd.Lage, Rebsorte: fd.Rebsorte, Gemarkung: fd.Gemarkung, Flur: fd.Flur,
       Flurstueck: fd.Flurstueck, Pflanzjahr: num(fd.Pflanzjahr), Flaeche_ha: num(fd.Flaeche_ha), Zeilenbreite_m: num(fd.Zeilenbreite_m) || 2, Stockabstand_m: num(fd.Stockabstand_m),
-      Reihen_Anzahl: num(fd.Reihen_Anzahl) ?? old.Reihen_Anzahl ?? null, Bemerkung: fd.Bemerkung, Status: old.Status || 'aktiv' });
+      Reihen_Anzahl: num(fd.Reihen_Anzahl) ?? old.Reihen_Anzahl ?? null, Bemerkung: fd.Bemerkung, Status: fd.Unbestockt ? 'unbestockt' : (old.Status === 'unbestockt' ? 'aktiv' : (old.Status || 'aktiv')) });
+    if (fd.Unbestockt) { w.Reihen = '[]'; w.Reihen_Anzahl = 0; }
     delete w._pending;
     queueOp({ weinberg: w }, 'Weinberg gespeichert');
     frameCache.clear();
@@ -1735,7 +1738,8 @@ const App = (() => {
          <div class="mapctl">${B('◀ Versatz', 'App.kAdj(\'off\',-0.2)')}${B('Versatz ▶', 'App.kAdj(\'off\',0.2)')}${B('Zeile enger', 'App.kAdj(\'sp\',-0.05)')}${B('Zeile weiter', 'App.kAdj(\'sp\',0.05)')}</div>
          <div class="mapctl">${B('Richtung neu', "App.kStep('richtung')")}${B('Umriss ändern', "App.kStep('umriss')")}</div>
          ${S.snap.arbeiten.some(a => a.Weinberg_ID === K.id) ? '<p class="note warn">Achtung: Wenn sich die Zahl der Reihen ändert, passen frühere Markierungen evtl. nicht mehr genau.</p>' : ''}
-         <button class="btn" onclick="App.kSave()">Umriss & Reihen speichern</button>`;
+         <button class="btn" onclick="App.kSave()">Umriss & Reihen speichern</button>
+         <button class="btn sec" onclick="App.kSave(true)">🌱 Unbestockt – nur Umriss speichern (ohne Reihen)</button>`;
     }
   }
   function kStep(s){
@@ -1781,18 +1785,20 @@ const App = (() => {
     queueOp({ weinberg: w }, 'Weinberg angelegt'); frameCache.clear();
     openKarte(w.Weinberg_ID);
   }
-  function kSave(){
+  function kSave(leer){
     const w = wbById(K.id); if (!w || !K.rowsLL) return;
+    if (leer) K.rowsLL = [];
     const polys = kPolys(), alk = K.mode === 'flst' ? K.parcels.filter(p => p.gemarkung) : (K.handInfo ? [K.handInfo] : []);
     const alkHa = alk.reduce((s, p) => s + (p.flaeche || 0), 0) / 10000;
     const upd = Object.assign({}, w, { Umriss: JSON.stringify(polys.length === 1 ? polys[0] : polys), Reihen: JSON.stringify(K.rowsLL.map(r => r.map(v => +v.toFixed(7)))), Reihen_Anzahl: K.rowsLL.length,
       Zeilenrichtung_Grad: +K.ang.toFixed(2), Versatz_m: +K.off.toFixed(2), Zeilenbreite_m: K.sp,
-      Flaeche_ha: alk.length ? +alkHa.toFixed(4) : (num(w.Flaeche_ha) || +(K.area / 10000).toFixed(4)) });
+      Flaeche_ha: alk.length ? +alkHa.toFixed(4) : (num(w.Flaeche_ha) || +(K.area / 10000).toFixed(4)),
+      Status: leer ? 'unbestockt' : (w.Status === 'unbestockt' ? 'aktiv' : (w.Status || 'aktiv')) });
     if (alk.length) { upd.Gemarkung = [...new Set(alk.map(p => p.gemarkung))].join(', '); upd.Flur = [...new Set(alk.map(p => p.flur))].join(', ');
       upd.Flurstueck = alk.map(p => p.nr).join(', '); if (!upd.Lage && alk[0].lage) upd.Lage = alk[0].lage; }
     delete upd._pending;
     if (K.parcels.some(p => p.cut) || (K.mode === 'hand' && K.handInfo)) upd.Flaeche_ha = +(K.area / 10000).toFixed(4);
-    queueOp({ weinberg: upd }, `${K.rowsLL.length} Reihen gespeichert`);
+    queueOp({ weinberg: upd }, leer ? 'Als unbestockte Fläche gespeichert' : `${K.rowsLL.length} Reihen gespeichert`);
     const rest = K.rest; frameCache.clear(); try { K.map.remove(); } catch (e) {} K = null;
     if (rest) {
       S.ui.restDraft = { polys: rest.map(p => p.poly), Gemarkung: upd.Gemarkung, Flur: upd.Flur, Flurstueck: upd.Flurstueck, Lage: upd.Lage, sp: upd.Zeilenbreite_m }; save();
